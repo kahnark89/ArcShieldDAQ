@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ArcShield</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+:root{--bg:#07090d;--bg2:#0e1117;--bg3:#151921;--bg4:#1c2030;--border:#252a3a;--text:#dfe4f0;--text2:#8b93a8;--text3:#4e5670;--blue:#4b8eff;--blue-bg:rgba(75,142,255,.1);--green:#34d399;--amber:#fbbf24;--red:#f87171;--pc:var(--red);--pi:var(--amber);--pa:var(--blue);--pe:var(--green);--pr:#a78bfa}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.hdr-b{display:flex;align-items:center;gap:10px}
+.hdr-m{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--blue),#22d3ee);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:13px;color:#fff}
+.hdr-n{font-weight:700;font-size:17px;letter-spacing:-.4px}
+.hdr-t{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text3);margin-top:1px}
+.hdr-r{display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text2)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--text3)}.dot.live{background:var(--green);animation:bl 2s infinite}.dot.busy{background:var(--amber);animation:bl .5s infinite}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:.3}}
+.nav{display:flex;background:var(--bg2);border-bottom:1px solid var(--border)}
+.nb{flex:1;padding:11px 4px 9px;background:none;border:none;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}.nb.on{color:var(--blue);border-bottom-color:var(--blue)}
+.pnl{display:none;padding:16px;padding-bottom:100px}.pnl.on{display:block}
+.card{background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px}
+.cl{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);margin-bottom:10px}
+.cw{position:relative;width:100%;aspect-ratio:4/3;border-radius:12px;overflow:hidden;background:#000}
+.cw video{width:100%;height:100%;object-fit:cover;display:block}.cw canvas{display:none}
+.ch{position:absolute;top:0;left:0;right:0;padding:10px 12px;display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(255,255,255,.6);pointer-events:none}
+.cd{position:absolute;bottom:12px;left:12px;display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--amber);opacity:0;transition:opacity .3s;pointer-events:none}.cd.show{opacity:1}
+.cdb{width:60px;height:4px;background:rgba(255,255,255,.15);border-radius:2px;overflow:hidden}
+.cdf{height:100%;background:var(--amber);border-radius:2px;width:0%;transition:width .3s linear}
+.cp{position:absolute;inset:0;background:var(--bg3);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;z-index:5}.cp.gone{display:none}
+.cp-i{font-size:48px;margin-bottom:14px}.cp-t{font-size:16px;font-weight:700;margin-bottom:6px}
+.cp-s{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text3);text-align:center;line-height:1.5;padding:0 24px}
+.pt{display:flex;gap:3px;margin-bottom:16px}.ps{flex:1;height:4px;border-radius:2px;background:var(--bg4);transition:background .3s}
+.ps[data-p="cause"].f{background:var(--pc)}.ps[data-p="intuition"].f{background:var(--pi)}.ps[data-p="action"].f{background:var(--pa)}.ps[data-p="effect"].f{background:var(--pe)}.ps[data-p="result"].f{background:var(--pr)}
+.pl{display:flex;justify-content:space-between;margin-bottom:16px}
+.plb{font-family:'IBM Plex Mono',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3);transition:color .2s;text-align:center;flex:1}
+.plb.a{color:var(--text);font-weight:600}.plb[data-p="cause"].a{color:var(--pc)}.plb[data-p="intuition"].a{color:var(--pi)}.plb[data-p="action"].a{color:var(--pa)}.plb[data-p="effect"].a{color:var(--pe)}.plb[data-p="result"].a{color:var(--pr)}
+.fc{border-left:3px solid var(--border);padding:14px 16px;background:var(--bg4);border-radius:0 12px 12px 0;margin-bottom:12px}
+.fc[data-a="cause"]{border-left-color:var(--pc)}.fc[data-a="intuition"]{border-left-color:var(--pi)}.fc[data-a="action"]{border-left-color:var(--pa)}.fc[data-a="effect"]{border-left-color:var(--pe)}.fc[data-a="result"]{border-left-color:var(--pr)}
+.ft{font-size:14px;font-weight:700;margin-bottom:4px}.fd{font-size:12px;color:var(--text2);line-height:1.5}
+.rr{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.rd{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-family:'IBM Plex Mono',monospace}
+.rdn{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px}.rdv{font-size:16px;font-weight:600;margin-top:2px}.rdu{font-size:10px;color:var(--text2);font-weight:400}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 20px;border:none;border-radius:10px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .12s;-webkit-user-select:none}
+.btn:active{transform:scale(.97)}.btn:disabled{opacity:.35;pointer-events:none}
+.bp{background:var(--blue);color:#fff}.bg{background:var(--bg4);color:var(--text);border:1px solid var(--border)}.bs{padding:8px 14px;font-size:12px;border-radius:8px}.bw{width:100%}
+.cr{width:62px;height:62px;border-radius:50%;background:var(--blue);border:3px solid rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;cursor:pointer;transition:all .15s}
+.cr:active{transform:scale(.88)}.cr.busy{background:var(--amber);animation:bl .6s infinite}
+.crow{display:flex;align-items:center;justify-content:center;gap:20px;padding:14px 0}
+.va{display:flex;flex-direction:column;align-items:center;padding:20px;gap:12px}
+.vb{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--pi),#f59e0b);border:none;color:#fff;font-size:28px;cursor:pointer;transition:all .15s;box-shadow:0 0 0 0 rgba(251,191,36,.4)}
+.vb.rec{animation:vp 1s infinite}@keyframes vp{0%{box-shadow:0 0 0 0 rgba(251,191,36,.5)}70%{box-shadow:0 0 0 18px rgba(251,191,36,0)}100%{box-shadow:0 0 0 0 rgba(251,191,36,0)}}
+.vh{font-size:13px;color:var(--text2);text-align:center}
+.vt{width:100%;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;min-height:50px;font-size:13px;color:var(--text);line-height:1.5;font-family:'IBM Plex Mono',monospace}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{padding:8px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--bg4);color:var(--text2);transition:all .12s}
+.chip:active,.chip.on{background:var(--blue-bg);border-color:var(--blue);color:var(--blue)}
+.ti{width:100%;padding:10px 14px;background:var(--bg4);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:13px;outline:none;resize:vertical;min-height:44px;transition:border-color .2s}
+.ti:focus{border-color:var(--blue)}.ti::placeholder{color:var(--text3)}
+.il{display:block;margin-bottom:6px;font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--text3)}
+.ig{margin-bottom:12px}
+.evt{position:relative;padding:14px 16px 14px 28px;margin-bottom:2px;background:var(--bg3);border:1px solid var(--border);border-radius:12px;cursor:pointer;transition:background .15s}
+.evt::before{content:'';position:absolute;left:12px;top:20px;width:8px;height:8px;border-radius:50%;background:var(--blue)}
+.evt.inc::before{background:var(--amber)}
+.evt-t{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text3)}
+.evt-s{font-size:13px;font-weight:500;margin-top:4px}
+.evt-p{display:flex;gap:4px;margin-top:8px}
+.epd{width:18px;height:4px;border-radius:2px;background:var(--bg4)}
+.epd.f[data-p="cause"]{background:var(--pc)}.epd.f[data-p="intuition"]{background:var(--pi)}.epd.f[data-p="action"]{background:var(--pa)}.epd.f[data-p="effect"]{background:var(--pe)}.epd.f[data-p="result"]{background:var(--pr)}
+.mb{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:flex-end;justify-content:center}.mb.show{display:flex}
+.ml{width:100%;max-height:85vh;background:var(--bg2);border-radius:20px 20px 0 0;padding:20px 16px 40px;overflow-y:auto}
+.mh{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px}
+.empty{text-align:center;padding:40px 20px;color:var(--text3)}.empty-i{font-size:40px;margin-bottom:10px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:500;z-index:300;opacity:0;transition:all .3s;max-width:88%;text-align:center;pointer-events:none}.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="hdr"><div class="hdr-b"><div class="hdr-m">AS</div><div><div class="hdr-n">ArcShield</div><div class="hdr-t">Decision Event Capture</div></div></div><div class="hdr-r"><div class="dot" id="sDot"></div><span id="sTxt">IDLE</span></div></div>
+<div class="nav"><button class="nb on" data-t="capture">Capture</button><button class="nb" data-t="events">Events</button><button class="nb" data-t="config">Config</button></div>
+
+<div class="pnl on" id="p-capture">
+<div class="pt"><div class="ps" data-p="cause"></div><div class="ps" data-p="intuition"></div><div class="ps" data-p="action"></div><div class="ps" data-p="effect"></div><div class="ps" data-p="result"></div></div>
+<div class="pl"><div class="plb a" data-p="cause">Cause</div><div class="plb" data-p="intuition">Intuition</div><div class="plb" data-p="action">Action</div><div class="plb" data-p="effect">Effect</div><div class="plb" data-p="result">Result</div></div>
+<div class="card" style="padding:0;overflow:hidden"><div class="cw"><video id="vid" autoplay playsinline muted></video><canvas id="cvs"></canvas><div class="ch"><span id="hTime"></span><span id="hEvt">0 events</span></div><div class="cd" id="dwI"><span>DWELL</span><div class="cdb"><div class="cdf" id="dwF"></div></div></div><div class="cp" id="cPerm" onclick="initCam()"><div class="cp-i">⚡</div><div class="cp-t">Start Camera</div><div class="cp-s">Opens camera for gauge capture.<br>Serve via localhost for permissions.</div></div></div></div>
+<div class="crow"><button class="btn bg bs" id="bFlip">⟲</button><div class="cr" id="bCap">◉</div><button class="btn bg bs" id="bSkip" style="visibility:hidden">Skip →</button></div>
+<div id="phC"></div>
+</div>
+
+<div class="pnl" id="p-events"><div class="card"><div class="cl">Decision Events</div><div id="evList"></div><div class="empty" id="evE"><div class="empty-i">📋</div><div>No events yet. Capture your first decision.</div></div></div><div style="display:flex;gap:8px"><button class="btn bg bs" style="flex:1" id="bExpJ">Export JSON</button><button class="btn bg bs" style="flex:1" id="bExpC">Export CSV</button></div></div>
+
+<div class="pnl" id="p-config"><div class="card"><div class="cl">AI Vision</div><div class="ig"><label class="il">Provider</label><select class="ti" id="cProv" style="min-height:auto"><option value="claude">Claude (Anthropic)</option><option value="gemini">Gemini (Google)</option></select></div><div class="ig"><label class="il">API Key</label><input type="password" class="ti" id="cKey" placeholder="Paste API key" style="min-height:auto"></div></div><div class="card"><div class="cl">Station</div><div class="ig"><label class="il">Line / Station Name</label><input type="text" class="ti" id="cSta" value="PPVC Line 1" style="min-height:auto"></div></div><div class="card"><div class="cl">Data</div><div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3);margin-bottom:10px"><span id="cCnt">0</span> events · <span id="cSz">0 KB</span></div><button class="btn bg bs" id="bClr" style="color:var(--red);border-color:rgba(248,113,113,.3)">Clear All Data</button></div><button class="btn bp bw" id="bSave" style="margin-top:8px">Save Config</button></div>
+
+<div class="mb" id="mBg"><div class="ml"><div class="mh"></div><div id="mC"></div></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const PH=['cause','intuition','action','effect','result'];
+const S={events:[],cur:null,phase:null,cfg:{provider:'claude',key:'',station:'PPVC Line 1'},cam:{stream:null,face:'environment'},dw:{dwelling:false,st:0},voice:{rec:null,on:false,txt:''},busy:false};
+
+const sv=()=>{try{localStorage.setItem('as_ev',JSON.stringify(S.events))}catch(e){}};
+const ld=()=>{try{let d=localStorage.getItem('as_ev');if(d)S.events=JSON.parse(d)}catch(e){}try{let c=localStorage.getItem('as_cfg');if(c)Object.assign(S.cfg,JSON.parse(c))}catch(e){}};
+const sc=()=>localStorage.setItem('as_cfg',JSON.stringify(S.cfg));
+
+async function initCam(){
+try{if(S.cam.stream)S.cam.stream.getTracks().forEach(t=>t.stop());
+S.cam.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:S.cam.face,width:{ideal:1280},height:{ideal:960}},audio:false});
+document.getElementById('vid').srcObject=S.cam.stream;
+document.getElementById('cPerm').classList.add('gone');
+ss('live','LIVE');startDwell()}catch(e){
+console.error(e);const p=document.getElementById('cPerm');
+p.querySelector('.cp-t').textContent='Camera Denied';
+p.querySelector('.cp-s').innerHTML='Requires HTTPS or localhost.<br><b>In Termux:</b> python -m http.server 8080<br><b>In Chrome:</b> localhost:8080/arcshield-daq.html';
+ss('','CAM ERR')}}
+
+function flipCam(){S.cam.face=S.cam.face==='environment'?'user':'environment';initCam()}
+
+function grab(){const v=document.getElementById('vid'),c=document.getElementById('cvs');c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);return c.toDataURL('image/jpeg',.85).split(',')[1]}
+
+function startDwell(){const v=document.getElementById('vid'),sm=document.createElement('canvas');sm.width=32;sm.height=24;const sx=sm.getContext('2d',{willReadFrequently:true});let prev=null,still=0;
+setInterval(()=>{if(!S.cam.stream)return;sx.drawImage(v,0,0,32,24);const d=sx.getImageData(0,0,32,24).data;
+if(prev){let df=0;for(let i=0;i<d.length;i+=4){df+=Math.abs(d[i]-prev[i])+Math.abs(d[i+1]-prev[i+1])+Math.abs(d[i+2]-prev[i+2])}df/=(32*24*3);
+if(df<12){still++;if(still>=3){const pct=Math.min(100,((still-3)/15)*100);document.getElementById('dwI').classList.add('show');document.getElementById('dwF').style.width=pct+'%';
+if(still===18&&!S.dw.dwelling){S.dw.dwelling=true;S.dw.st=Date.now();toast('👁 Dwell — fixating on instrument')}}}
+else{if(S.dw.dwelling){S.dw.dwelling=false;const dur=((Date.now()-S.dw.st)/1000).toFixed(1);toast('⚡ View shift after '+dur+'s dwell');if(!S.cur&&!S.busy)startEvent()}
+still=0;document.getElementById('dwI').classList.remove('show');document.getElementById('dwF').style.width='0%'}}
+prev=new Uint8Array(d)},333)}
+
+const GP=`You are an industrial DAQ system. Identify ALL visible instruments (gauges, digital displays, PID controllers, pressure gauges, temperature readouts, ammeters, etc). For each: name (descriptive), value (number), unit, confidence (0-1). Return ONLY JSON array, no markdown. Example: [{"name":"Zone 3 Barrel Temp","value":385,"unit":"°F","confidence":0.92}] If none visible: []`;
+
+async function readFrame(b64){const{provider,key}=S.cfg;if(!key){toast('Set API key in Config');return null}
+ss('busy','READING');try{if(provider==='claude'){
+const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1024,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:GP}]}]})});
+if(!r.ok)throw new Error('API '+r.status);const d=await r.json();return pJ(d.content[0].text)}
+else{const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key='+key,{method:'POST',headers:{'Content-Type':'application/json'},
+body:JSON.stringify({contents:[{parts:[{inline_data:{mime_type:'image/jpeg',data:b64}},{text:GP}]}]})});
+if(!r.ok)throw new Error('API '+r.status);const d=await r.json();return pJ(d.candidates[0].content.parts[0].text)}}
+catch(e){toast('API Error: '+e.message);return null}finally{ss('live','LIVE')}}
+
+function pJ(t){const c=t.replace(/```json\s*/g,'').replace(/```\s*/g,'').trim();try{const p=JSON.parse(c);return Array.isArray(p)?p:[]}catch(e){const m=c.match(/\[[\s\S]*\]/);if(m)try{return JSON.parse(m[0])}catch(e2){}return[]}}
+
+function speak(msg,cb){if(!window.speechSynthesis){cb&&cb();return}window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(msg);u.rate=1.05;u.pitch=1;if(cb)u.onend=cb;window.speechSynthesis.speak(u)}
+
+function initVoice(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return;
+S.voice.rec=new SR();S.voice.rec.continuous=true;S.voice.rec.interimResults=true;S.voice.rec.lang='en-US';
+S.voice.rec.onresult=e=>{let finals='',interim='';for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)finals+=e.results[i][0].transcript+' ';else interim+=e.results[i][0].transcript}if(finals)S.voice.txt=(S.voice.txt+' '+finals).trim();const show=(S.voice.txt+(interim?' '+interim:'')).trim();const el=document.getElementById('vTxt');if(el)el.textContent=show||'Listening...'};
+S.voice.rec.onerror=e=>{if(e.error==='not-allowed')return;if(S.voice.on)try{S.voice.rec.start()}catch(x){}};
+S.voice.rec.onend=()=>{if(S.voice.on)try{S.voice.rec.start()}catch(e){}};}
+
+function togVoice(){if(!S.voice.rec){toast('Speech not available');return}
+if(S.voice.on){S.voice.on=false;S.voice.rec.stop();document.getElementById('vBtn')?.classList.remove('rec')}
+else{S.voice.txt='';S.voice.on=true;S.voice.rec.start();document.getElementById('vBtn')?.classList.add('rec');const el=document.getElementById('vTxt');if(el)el.textContent='Listening...'}}
+
+function startEvent(){S.cur={id:Date.now().toString(36)+Math.random().toString(36).substr(2,4),ts:new Date().toISOString(),station:S.cfg.station,cause:null,intuition:null,action:null,effect:null,result:null};
+setP('cause');doCause()}
+
+async function doCause(){S.busy=true;const b=document.getElementById('bCap');b.classList.add('busy');b.textContent='⏳';
+const b64=grab(),rdg=await readFrame(b64);
+S.cur.cause={ts:new Date().toISOString(),readings:rdg||[],note:''};
+S.busy=false;b.classList.remove('busy');b.textContent='◉';
+renderPC('cause',rdg||[]);const n=rdg?.length||0;toast(n?'📊 '+n+' instrument'+(n>1?'s':'')+' captured':'No instruments detected');speak(n?n+' instrument'+(n>1?'s':'')+' captured. What were you noticing?':'No instruments detected. Describe what you observed.')}
+
+async function doEffect(){S.busy=true;const btn=document.getElementById('bEff');btn.disabled=true;btn.textContent='⏳ Reading...';
+const b64=grab(),rdg=await readFrame(b64);
+let deltas=[];if(rdg&&S.cur.cause?.readings){rdg.forEach(r=>{const bef=S.cur.cause.readings.find(c=>c.name===r.name);
+if(bef&&typeof bef.value==='number'&&typeof r.value==='number')deltas.push({name:r.name,before:bef.value,after:r.value,delta:+(r.value-bef.value).toFixed(2),unit:r.unit})})}
+S.cur.effect={ts:new Date().toISOString(),readings:rdg||[],deltas};
+let h='';if(deltas.length){h='<div class="rr">';deltas.forEach(d=>{const col=d.delta===0?'var(--text2)':(d.delta>0?'var(--red)':'var(--green)');const ar=d.delta>0?'↑':(d.delta<0?'↓':'→');
+h+=`<div class="rd"><div class="rdn">${d.name}</div><div class="rdv" style="color:${col}">${ar}${Math.abs(d.delta)}<span class="rdu">${d.unit||''}</span></div><div style="font-size:9px;color:var(--text3);margin-top:2px">${d.before} → ${d.after}</div></div>`});h+='</div>'}
+else if(rdg?.length){h='<div class="rr">';rdg.forEach(r=>{h+=`<div class="rd"><div class="rdn">${r.name}</div><div class="rdv">${r.value}<span class="rdu">${r.unit||''}</span></div></div>`});h+='</div>'}
+document.getElementById('effR').innerHTML=h+`<button class="btn bp bw" style="margin-top:12px" onclick="setP('result');renderPC('result')">Next: Rate outcome</button>`;
+S.busy=false;btn.disabled=false;btn.textContent='📷 Recapture';toast('Effect captured')}
+
+function setP(p){S.phase=p;const i=PH.indexOf(p);
+document.querySelectorAll('.ps').forEach((el,j)=>el.classList.toggle('f',j<=i));
+document.querySelectorAll('.plb').forEach((el,j)=>el.classList.toggle('a',j===i));
+document.getElementById('bSkip').style.visibility=(p==='intuition'||p==='result')?'visible':'hidden'}
+
+function renderPC(p,data){const el=document.getElementById('phC');
+if(p==='cause'){let rh='';(data||[]).forEach(r=>{rh+=`<div class="rd"><div class="rdn">${r.name}</div><div class="rdv">${r.value}<span class="rdu">${r.unit||''}</span></div></div>`});
+el.innerHTML=`<div class="fc" data-a="cause"><div class="ft" style="color:var(--pc)">What did you observe?</div><div class="fd">Instruments captured. Add visual context below.</div>${rh?`<div class="rr">${rh}</div>`:'<div style="margin-top:8px;font-size:12px;color:var(--text3)">No instruments detected</div>'}</div>
+<div class="ig"><label class="il">Visual context (optional)</label><textarea class="ti" id="cNote" placeholder="e.g. extrudate surface rough, color shift at die..."></textarea></div>
+<button class="btn bp bw" onclick="saveCause()">Next: What's your read?</button>`}
+else if(p==='intuition'){el.innerHTML=`<div class="fc" data-a="intuition"><div class="ft" style="color:var(--pi)">What's your gut telling you?</div><div class="fd">Tap mic and say what you're thinking. 5 seconds is plenty.</div></div>
+<div class="va"><button class="vb" id="vBtn" onclick="togVoice()">🎤</button><div class="vh">Tap to speak, tap to stop</div><div class="vt" id="vTxt">Ready to listen...</div></div>
+<div class="ig" style="margin-top:8px"><label class="il">Or type it</label><textarea class="ti" id="iText" placeholder="e.g. Zone 3 hot for this resin, die drool incoming..."></textarea></div>
+<button class="btn bp bw" onclick="saveIntuition()">Next: What did you do?</button>`;speak("What's your read on this? Say what you're thinking.",()=>{if(!S.voice.on)togVoice()})}
+else if(p==='action'){el.innerHTML=`<div class="fc" data-a="action"><div class="ft" style="color:var(--pa)">What action did you take?</div><div class="fd">Select type and add detail.</div></div>
+<div class="chips" id="aC"><span class="chip" data-v="adjusted_temp">Adjusted Temp</span><span class="chip" data-v="adjusted_speed">Adjusted Speed</span><span class="chip" data-v="adjusted_pressure">Adjusted Pressure</span><span class="chip" data-v="screen_change">Screen Change</span><span class="chip" data-v="material_change">Material Change</span><span class="chip" data-v="called_maintenance">Called Maintenance</span><span class="chip" data-v="no_action">No Action (Monitoring)</span><span class="chip" data-v="other">Other</span></div>
+<div class="ig" style="margin-top:12px"><label class="il">Detail</label><textarea class="ti" id="aDet" placeholder="e.g. dropped Zone 3 setpoint by 5°F..."></textarea></div>
+<button class="btn bp bw" onclick="saveAction()">Next: Capture effect</button>`;
+speak("What action did you take?");setTimeout(()=>{document.querySelectorAll('#aC .chip').forEach(c=>{c.addEventListener('click',()=>{document.querySelectorAll('#aC .chip').forEach(x=>x.classList.remove('on'));c.classList.add('on')})})},50)}
+else if(p==='effect'){el.innerHTML=`<div class="fc" data-a="effect"><div class="ft" style="color:var(--pe)">Capture the effect</div><div class="fd">Point camera at same instruments. Tap capture when ready.</div></div>
+<button class="btn bp bw" id="bEff" onclick="doEffect()">📷 Capture After-State</button><div id="effR" style="margin-top:12px"></div>`;speak("Ready to capture the effect. Point at the same instruments.")}
+else if(p==='result'){el.innerHTML=`<div class="fc" data-a="result"><div class="ft" style="color:var(--pr)">How did it turn out?</div><div class="fd">Quick assessment.</div></div>
+<div class="chips" id="rC"><span class="chip" data-v="problem_prevented">Problem Prevented</span><span class="chip" data-v="problem_resolved">Problem Resolved</span><span class="chip" data-v="partial_improvement">Partial</span><span class="chip" data-v="no_change">No Change</span><span class="chip" data-v="made_worse">Made Worse</span><span class="chip" data-v="too_early">Too Early</span></div>
+<div class="ig" style="margin-top:12px"><label class="il">Notes</label><textarea class="ti" id="rNote" placeholder="e.g. die drool cleared in 10 min, line ran clean..."></textarea></div>
+<button class="btn bp bw" onclick="saveResult()">Save Event ✓</button>`;
+speak("How did it turn out?");setTimeout(()=>{document.querySelectorAll('#rC .chip').forEach(c=>{c.addEventListener('click',()=>{document.querySelectorAll('#rC .chip').forEach(x=>x.classList.remove('on'));c.classList.add('on')})})},50)}}
+
+function saveCause(){if(S.cur)S.cur.cause.note=document.getElementById('cNote')?.value||'';setP('intuition');renderPC('intuition')}
+function saveIntuition(){if(S.voice.on)togVoice();if(S.cur){const t=document.getElementById('iText')?.value||'';S.cur.intuition={ts:new Date().toISOString(),voice:S.voice.txt||'',typed:t,text:S.voice.txt||t||''}}S.voice.txt='';setP('action');renderPC('action')}
+function saveAction(){if(S.cur){const c=document.querySelector('#aC .chip.on');S.cur.action={ts:new Date().toISOString(),type:c?c.dataset.v:'unspecified',detail:document.getElementById('aDet')?.value||''}}setP('effect');renderPC('effect')}
+function saveResult(){if(S.cur){const c=document.querySelector('#rC .chip.on');S.cur.result={ts:new Date().toISOString(),outcome:c?c.dataset.v:'unspecified',note:document.getElementById('rNote')?.value||''}}finalize()}
+
+function finalize(){if(S.cur){S.events.push(S.cur);sv();toast('✓ Decision event saved');speak('Decision event saved.')}
+S.cur=null;S.phase=null;document.querySelectorAll('.ps').forEach(e=>e.classList.remove('f'));
+document.querySelectorAll('.plb').forEach(e=>e.classList.remove('a'));document.querySelector('.plb[data-p="cause"]').classList.add('a');
+document.getElementById('phC').innerHTML=`<div class="empty" style="padding:30px 20px"><div class="empty-i">⚡</div><div style="font-size:14px;color:var(--text2)">Ready for next event</div><div style="font-size:12px;color:var(--text3);margin-top:4px">Tap capture or wait for dwell trigger</div></div>`;
+document.getElementById('bSkip').style.visibility='hidden';updCnt()}
+
+function skipP(){const i=PH.indexOf(S.phase);if(i<PH.length-1){setP(PH[i+1]);renderPC(PH[i+1])}else finalize()}
+
+function renderEv(){const el=document.getElementById('evList'),em=document.getElementById('evE');
+if(!S.events.length){el.innerHTML='';em.style.display='block';return}em.style.display='none';
+el.innerHTML=[...S.events].reverse().map(ev=>{const ph=PH.map(p=>`<div class="epd ${ev[p]?'f':''}" data-p="${p}"></div>`).join('');
+const rdg=ev.cause?.readings?.map(r=>r.name+':'+r.value+(r.unit||'')).join(', ')||'';
+const act=ev.action?.type?.replace(/_/g,' ')||'';const intu=ev.intuition?.text?'"'+ev.intuition.text.substring(0,60)+(ev.intuition.text.length>60?'...':'')+'"':'';
+const comp=PH.every(p=>ev[p]);return`<div class="evt ${comp?'':'inc'}" onclick="showDet('${ev.id}')"><div class="evt-t">${new Date(ev.ts).toLocaleString()}</div><div class="evt-s">${act||rdg.substring(0,50)||'Event'}</div>${intu?`<div style="font-size:11px;color:var(--pi);margin-top:4px;font-style:italic">${intu}</div>`:''}<div class="evt-p">${ph}</div></div>`}).join('')}
+
+function showDet(id){const ev=S.events.find(e=>e.id===id);if(!ev)return;let h='';
+if(ev.cause){const rh=ev.cause.readings?.map(r=>`<div class="rd"><div class="rdn">${r.name}</div><div class="rdv">${r.value}<span class="rdu">${r.unit||''}</span></div></div>`).join('')||'';
+h+=`<div class="fc" data-a="cause"><div class="ft" style="color:var(--pc)">Cause</div><div class="fd">${new Date(ev.cause.ts).toLocaleString()}</div>${rh?`<div class="rr">${rh}</div>`:''}${ev.cause.note?`<div style="margin-top:8px;font-size:12px;color:var(--text2)">${ev.cause.note}</div>`:''}</div>`}
+if(ev.intuition)h+=`<div class="fc" data-a="intuition"><div class="ft" style="color:var(--pi)">Intuition</div><div class="fd" style="font-style:italic">"${ev.intuition.text}"</div></div>`;
+if(ev.action)h+=`<div class="fc" data-a="action"><div class="ft" style="color:var(--pa)">Action</div><div class="fd"><strong>${(ev.action.type||'').replace(/_/g,' ')}</strong></div>${ev.action.detail?`<div style="font-size:12px;color:var(--text2);margin-top:4px">${ev.action.detail}</div>`:''}</div>`;
+if(ev.effect){let dh='';if(ev.effect.deltas?.length){dh='<div class="rr">';ev.effect.deltas.forEach(d=>{const col=d.delta===0?'var(--text2)':(d.delta>0?'var(--red)':'var(--green)');const ar=d.delta>0?'↑':(d.delta<0?'↓':'→');
+dh+=`<div class="rd"><div class="rdn">${d.name}</div><div class="rdv" style="color:${col}">${ar}${Math.abs(d.delta)}<span class="rdu">${d.unit||''}</span></div><div style="font-size:9px;color:var(--text3)">${d.before}→${d.after}</div></div>`});dh+='</div>'}
+h+=`<div class="fc" data-a="effect"><div class="ft" style="color:var(--pe)">Effect</div>${dh||'<div class="fd">'+new Date(ev.effect.ts).toLocaleTimeString()+'</div>'}</div>`}
+if(ev.result)h+=`<div class="fc" data-a="result"><div class="ft" style="color:var(--pr)">Result</div><div class="fd"><strong>${(ev.result.outcome||'').replace(/_/g,' ')}</strong></div>${ev.result.note?`<div style="font-size:12px;color:var(--text2);margin-top:4px">${ev.result.note}</div>`:''}</div>`;
+document.getElementById('mC').innerHTML=h;document.getElementById('mBg').classList.add('show')}
+
+function expJ(){if(!S.events.length){toast('No events');return}dlf(JSON.stringify(S.events,null,2),'arcshield_events_'+new Date().toISOString().slice(0,10)+'.json','application/json');toast('Exported')}
+function expC(){if(!S.events.length){toast('No events');return}
+let csv='timestamp,station,cause_readings,cause_note,intuition,action_type,action_detail,effect_deltas,result,result_note\n';
+S.events.forEach(ev=>{const r=ev.cause?.readings?.map(r=>r.name+':'+r.value+(r.unit||'')).join('|')||'';const d=ev.effect?.deltas?.map(d=>d.name+':'+d.delta+(d.unit||'')).join('|')||'';
+csv+=`"${ev.ts}","${ev.station}","${r}","${ev.cause?.note||''}","${ev.intuition?.text||''}","${ev.action?.type||''}","${ev.action?.detail||''}","${d}","${ev.result?.outcome||''}","${ev.result?.note||''}"\n`});
+dlf(csv,'arcshield_events_'+new Date().toISOString().slice(0,10)+'.csv','text/csv');toast('CSV exported')}
+function dlf(c,n,t){const b=new Blob([c],{type:t}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=n;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u)}
+
+function ss(c,t){document.getElementById('sDot').className='dot '+c;document.getElementById('sTxt').textContent=t}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2500)}
+function updCnt(){document.getElementById('hEvt').textContent=S.events.length+' events'}
+function updCfg(){const r=localStorage.getItem('as_ev')||'[]';document.getElementById('cCnt').textContent=S.events.length;document.getElementById('cSz').textContent=(r.length/1024).toFixed(1)+' KB'}
+function swP(n){document.querySelectorAll('.nb').forEach(b=>b.classList.toggle('on',b.dataset.t===n));document.querySelectorAll('.pnl').forEach(p=>p.classList.toggle('on',p.id==='p-'+n));if(n==='events')renderEv();if(n==='config')updCfg()}
+
+function init(){ld();
+document.getElementById('cProv').value=S.cfg.provider;document.getElementById('cKey').value=S.cfg.key;document.getElementById('cSta').value=S.cfg.station;
+document.querySelectorAll('.nb').forEach(b=>b.addEventListener('click',()=>swP(b.dataset.t)));
+document.getElementById('bFlip').addEventListener('click',flipCam);
+document.getElementById('bCap').addEventListener('click',()=>{if(S.busy)return;if(!S.cur)startEvent();else if(S.phase==='cause')doCause()});
+document.getElementById('bSkip').addEventListener('click',skipP);
+document.getElementById('bSave').addEventListener('click',()=>{S.cfg.provider=document.getElementById('cProv').value;S.cfg.key=document.getElementById('cKey').value;S.cfg.station=document.getElementById('cSta').value;sc();toast('Config saved ✓')});
+document.getElementById('bClr').addEventListener('click',()=>{if(confirm('Delete all events?')){S.events=[];sv();toast('Cleared');updCfg()}});
+document.getElementById('bExpJ').addEventListener('click',expJ);document.getElementById('bExpC').addEventListener('click',expC);
+document.getElementById('mBg').addEventListener('click',e=>{if(e.target.id==='mBg')e.target.classList.remove('show')});
+setInterval(()=>{document.getElementById('hTime').textContent=new Date().toLocaleTimeString()},1000);
+initVoice();updCnt();
+document.getElementById('phC').innerHTML=`<div class="empty" style="padding:30px 20px"><div class="empty-i">⚡</div><div style="font-size:14px;color:var(--text2)">Ready to capture</div><div style="font-size:12px;color:var(--text3);margin-top:4px">Start camera, then tap capture or wait for dwell trigger</div></div>`}
+
+document.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>
