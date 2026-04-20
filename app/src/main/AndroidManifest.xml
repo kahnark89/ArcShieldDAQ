@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Internet: LLM API calls -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Camera: gauge reading at Cause moment -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="true" />
+
+    <!-- Microphone: voice annotation during Intuition phase -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!--
+        Health Connect permissions are declared here so the OS can surface
+        them in the Health Connect permission dialog. Actual runtime permission
+        requests happen in the biometric source layer (future phase).
+    -->
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE_VARIABILITY" />
+    <uses-permission android:name="android.permission.health.READ_EXERCISE" />
+
+    <application
+        android:name=".ArcShieldApp"
+        android:label="@string/app_name"
+        android:theme="@style/Theme.ArcShieldDAQ"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--
+            Health Connect integration: declares this app as a data provider
+            so the Health Connect app can surface the correct permission screen.
+        -->
+        <activity
+            android:name="androidx.health.connect.client.PermissionController"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
+        </activity>
+
+    </application>
+
+</manifest>

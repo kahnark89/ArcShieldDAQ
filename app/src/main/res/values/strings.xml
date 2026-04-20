@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ArcShield</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title">Choose your AI provider</string>
+    <string name="onboarding_subtitle">ArcShield uses a vision AI to read gauges and instruments. Select a provider and enter your API key to get started.</string>
+    <string name="onboarding_provider_claude">Claude (Anthropic)</string>
+    <string name="onboarding_provider_gemini">Gemini (Google)</string>
+    <string name="onboarding_api_key_label">API Key</string>
+    <string name="onboarding_api_key_hint">Paste your API key here</string>
+    <string name="onboarding_cta">Get started</string>
+    <string name="onboarding_key_stored_note">Your key is stored encrypted on this device and never transmitted except to the selected provider.</string>
+</resources>
