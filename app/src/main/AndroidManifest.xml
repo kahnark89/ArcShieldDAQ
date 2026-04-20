@@ -42,11 +42,11 @@
         </activity>
 
         <!--
-            Health Connect integration: declares this app as a data provider
-            so the Health Connect app can surface the correct permission screen.
+            Health Connect: rationale activity stub. Replace with your own
+            Activity class when the biometric layer is implemented (next phase).
         -->
         <activity
-            android:name="androidx.health.connect.client.PermissionController"
+            android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
