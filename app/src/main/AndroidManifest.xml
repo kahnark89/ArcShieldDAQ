@@ -39,15 +39,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
-
-        <!--
-            Health Connect: rationale activity stub. Replace with your own
-            Activity class when the biometric layer is implemented (next phase).
-        -->
-        <activity
-            android:name=".MainActivity"
-            android:exported="true">
+            <!-- Health Connect permissions rationale -->
             <intent-filter>
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
             </intent-filter>
