@@ -9,12 +9,12 @@ plugins {
 
 android {
     namespace   = "com.arcshield.app"
-    compileSdk  = 35
+    compileSdk  = 36
 
     defaultConfig {
         applicationId   = "com.arcshield.app"
         minSdk          = 35
-        targetSdk       = 35
+        targetSdk       = 36
         versionCode     = 1
         versionName     = "0.1.0"
     }
