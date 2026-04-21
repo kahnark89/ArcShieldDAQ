@@ -7,11 +7,11 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import java.io.IOException
 
 private const val TAG = "ClaudeLlmProvider"
 private const val API_URL = "https://api.anthropic.com/v1/messages"
@@ -65,7 +65,7 @@ class ClaudeLlmProvider(private val apiKey: String) : LlmProvider {
                     },
                     {
                       "type": "text",
-                      "text": ${kotlinx.serialization.json.Json.encodeToString(kotlinx.serialization.json.JsonPrimitive(prompt))}
+                      "text": ${JsonPrimitive(prompt)}
                     }
                   ]
                 }
