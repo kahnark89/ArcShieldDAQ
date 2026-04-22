@@ -13,8 +13,5 @@ local.properties
 ### App build outputs ###
 app/build/
 
-### Gradle wrapper JAR (binary — download via `gradle wrapper` or Android Studio) ###
-gradle/wrapper/gradle-wrapper.jar
-
 ### Kotlin ###
 *.class
