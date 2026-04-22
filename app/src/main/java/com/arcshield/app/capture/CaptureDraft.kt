@@ -2,6 +2,7 @@ package com.arcshield.app.capture
 
 import com.arcshield.app.data.schema.Action
 import com.arcshield.app.data.schema.ActionStep
+import com.arcshield.app.data.schema.BiometricSnapshot
 import com.arcshield.app.data.schema.Cause
 import com.arcshield.app.data.schema.CiaerPlusEvent
 import com.arcshield.app.data.schema.Effect
@@ -31,6 +32,7 @@ data class CaptureDraft(
     val visualAnchorDescription: String? = null,
     val visualAnchorFrameRef:  String? = null,
     val causeSensorReadings:   List<SensorReading> = emptyList(),
+    val causeBiometrics:       BiometricSnapshot? = null,
 
     val srkLevel:          SrkLevel = SrkLevel.RULE,
     val srkConfidence:     Double?  = null,
@@ -64,6 +66,7 @@ data class CaptureDraft(
             triggerSource           = triggerSource,
             triggerChannels         = triggerChannels,
             sensorReadings          = causeSensorReadings,
+            biometricSnapshot       = causeBiometrics,
             visualAnchorDescription = visualAnchorDescription,
             visualAnchorFrameRef    = visualAnchorFrameRef,
         )

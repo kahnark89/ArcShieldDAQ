@@ -1,7 +1,10 @@
 package com.arcshield.app.capture
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.arcshield.app.bio.source.BiometricSource
+import com.arcshield.app.capture.source.PhoneCameraSource
 import com.arcshield.app.data.schema.KnowledgeSource
 import com.arcshield.app.data.schema.OutcomeTag
 import com.arcshield.app.data.schema.PredictionMatch
@@ -10,17 +13,22 @@ import com.arcshield.app.data.schema.SrkLevel
 import com.arcshield.app.preenv.source.PreEnvSource
 import com.arcshield.app.sync.CorpusSink
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.File
 import java.time.Instant
 import javax.inject.Inject
 
 @HiltViewModel
 class CaptureViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
+    val phoneCamera:    PhoneCameraSource,
     private val preEnv: PreEnvSource,
+    private val biometrics: BiometricSource,
     private val sink:   CorpusSink,
 ) : ViewModel() {
 
@@ -66,6 +74,29 @@ class CaptureViewModel @Inject constructor(
     fun updateCause(
         description: String? = null,
     ) = _state.update { it.copy(draft = it.draft.copy(visualAnchorDescription = description)) }
+
+    fun captureCauseFrame() {
+        viewModelScope.launch {
+            val bio = runCatching { biometrics.currentSnapshot() }.getOrNull()
+            runCatching { phoneCamera.captureFrame() }
+                .onSuccess { bytes ->
+                    val path = bytes?.let { writeJpegToCache(it).absolutePath }
+                    _state.update {
+                        it.copy(draft = it.draft.copy(
+                            visualAnchorFrameRef = path ?: it.draft.visualAnchorFrameRef,
+                            causeBiometrics      = bio ?: it.draft.causeBiometrics,
+                        ))
+                    }
+                }
+        }
+    }
+
+    private fun writeJpegToCache(bytes: ByteArray): File {
+        val dir = File(context.cacheDir, "cause_frames").apply { mkdirs() }
+        val file = File(dir, "${Instant.now().toEpochMilli()}.jpg")
+        file.writeBytes(bytes)
+        return file
+    }
 
     fun updateIntuition(
         srkLevel:         SrkLevel?         = null,

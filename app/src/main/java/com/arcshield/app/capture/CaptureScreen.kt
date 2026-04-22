@@ -51,7 +51,7 @@ fun CaptureScreen(
 
         when (state.phase) {
             CapturePhase.IDLE      -> IdlePanel(onBegin = viewModel::startCycle)
-            CapturePhase.CAUSE     -> CausePanel(state.draft, viewModel::updateCause)
+            CapturePhase.CAUSE     -> CausePanel(state.draft, viewModel)
             CapturePhase.INTUITION -> IntuitionPanel(state.draft, viewModel::updateIntuition)
             CapturePhase.ACTION    -> ActionPanel(state.draft, viewModel)
             CapturePhase.EFFECT    -> EffectPanel(state.draft, viewModel::updateEffect)
@@ -99,12 +99,29 @@ private fun IdlePanel(onBegin: () -> Unit) {
 }
 
 @Composable
-private fun CausePanel(draft: CaptureDraft, onUpdate: (String?) -> Unit) {
+private fun CausePanel(draft: CaptureDraft, viewModel: CaptureViewModel) {
     var note by remember { mutableStateOf(draft.visualAnchorDescription.orEmpty()) }
     Text("Captured at: ${draft.causeCapturedAt ?: "—"}", style = MaterialTheme.typography.bodySmall)
+
+    CameraPreview(source = viewModel.phoneCamera)
+
+    OutlinedButton(onClick = viewModel::captureCauseFrame) {
+        Text(
+            if (draft.visualAnchorFrameRef == null) "Snap Cause frame"
+            else "Retake Cause frame",
+        )
+    }
+    draft.visualAnchorFrameRef?.let {
+        Text("Frame saved: ${it.substringAfterLast('/')}",
+            style = MaterialTheme.typography.bodySmall)
+    }
+
     OutlinedTextField(
         value         = note,
-        onValueChange = { note = it; onUpdate(it.ifBlank { null }) },
+        onValueChange = {
+            note = it
+            viewModel.updateCause(description = it.ifBlank { null })
+        },
         label         = { Text("What drew attention? (optional)") },
         modifier      = Modifier.fillMaxWidth(),
     )
