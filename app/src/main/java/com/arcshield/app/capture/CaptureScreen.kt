@@ -25,8 +25,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.arcshield.app.data.schema.OutcomeTag
@@ -52,7 +58,7 @@ fun CaptureScreen(
         when (state.phase) {
             CapturePhase.IDLE      -> IdlePanel(onBegin = viewModel::startCycle)
             CapturePhase.CAUSE     -> CausePanel(state.draft, viewModel)
-            CapturePhase.INTUITION -> IntuitionPanel(state.draft, viewModel::updateIntuition)
+            CapturePhase.INTUITION -> IntuitionPanel(state.draft, viewModel, viewModel::updateIntuition)
             CapturePhase.ACTION    -> ActionPanel(state.draft, viewModel)
             CapturePhase.EFFECT    -> EffectPanel(state.draft, viewModel::updateEffect)
             CapturePhase.RESULT    -> ResultPanel(state.draft, viewModel::updateResult)
@@ -129,9 +135,13 @@ private fun CausePanel(draft: CaptureDraft, viewModel: CaptureViewModel) {
 
 @Composable
 private fun IntuitionPanel(
-    draft:    CaptureDraft,
-    onUpdate: (SrkLevel?, String?, String?, Double?, com.arcshield.app.data.schema.KnowledgeSource?) -> Unit,
+    draft:     CaptureDraft,
+    viewModel: CaptureViewModel,
+    onUpdate:  (SrkLevel?, String?, String?, Double?, com.arcshield.app.data.schema.KnowledgeSource?) -> Unit,
 ) {
+    VoiceCaptureRow(draft = draft, viewModel = viewModel)
+    Spacer(Modifier.height(4.dp))
+
     Text("SRK classification")
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         SrkLevel.values().forEach { level ->
@@ -293,4 +303,40 @@ private fun ResultPanel(
         label         = { Text("Escalation delta (narrative)") },
         modifier      = Modifier.fillMaxWidth(),
     )
+}
+
+@Composable
+private fun VoiceCaptureRow(
+    draft:     CaptureDraft,
+    viewModel: CaptureViewModel,
+) {
+    val ctx = LocalContext.current
+    var granted by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO)
+                == PackageManager.PERMISSION_GRANTED
+        )
+    }
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { ok ->
+        granted = ok
+        if (ok) viewModel.startVoiceIntuition()
+    }
+
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment     = androidx.compose.ui.Alignment.CenterVertically,
+    ) {
+        OutlinedButton(onClick = {
+            if (granted) viewModel.startVoiceIntuition()
+            else launcher.launch(Manifest.permission.RECORD_AUDIO)
+        }) { Text("Voice Intuition") }
+        draft.voiceTranscript?.let {
+            Text(
+                "\"${it.take(60)}\"",
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+    }
 }

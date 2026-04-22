@@ -10,13 +10,17 @@ import com.arcshield.app.data.schema.OutcomeTag
 import com.arcshield.app.data.schema.PredictionMatch
 import com.arcshield.app.data.schema.ShadowAction
 import com.arcshield.app.data.schema.SrkLevel
+import com.arcshield.app.llm.IntuitionParser
 import com.arcshield.app.preenv.source.PreEnvSource
 import com.arcshield.app.sync.CorpusSink
+import com.arcshield.app.vision.GaugeReader
+import com.arcshield.app.voice.SpeechInput
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
@@ -26,10 +30,13 @@ import javax.inject.Inject
 @HiltViewModel
 class CaptureViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    val phoneCamera:    PhoneCameraSource,
-    private val preEnv: PreEnvSource,
+    val phoneCamera:        PhoneCameraSource,
+    private val preEnv:     PreEnvSource,
     private val biometrics: BiometricSource,
-    private val sink:   CorpusSink,
+    private val gaugeReader: GaugeReader,
+    val speechInput:        SpeechInput,
+    private val intuitionParser: IntuitionParser,
+    private val sink:       CorpusSink,
 ) : ViewModel() {
 
     data class State(
@@ -81,13 +88,41 @@ class CaptureViewModel @Inject constructor(
             runCatching { phoneCamera.captureFrame() }
                 .onSuccess { bytes ->
                     val path = bytes?.let { writeJpegToCache(it).absolutePath }
+                    val readings = bytes?.let { gaugeReader.read(it) }.orEmpty()
                     _state.update {
                         it.copy(draft = it.draft.copy(
                             visualAnchorFrameRef = path ?: it.draft.visualAnchorFrameRef,
                             causeBiometrics      = bio ?: it.draft.causeBiometrics,
+                            causeSensorReadings  = if (readings.isNotEmpty()) readings else it.draft.causeSensorReadings,
                         ))
                     }
                 }
+        }
+    }
+
+    fun startVoiceIntuition() {
+        viewModelScope.launch {
+            speechInput.listen().collect { ev ->
+                when (ev) {
+                    is SpeechInput.Event.Partial -> _state.update {
+                        it.copy(draft = it.draft.copy(voiceTranscript = ev.text))
+                    }
+                    is SpeechInput.Event.Final -> {
+                        _state.update { it.copy(draft = it.draft.copy(voiceTranscript = ev.text)) }
+                        val parsed = intuitionParser.parse(ev.text)
+                        _state.update { st ->
+                            st.copy(draft = st.draft.copy(
+                                srkLevel         = parsed.srkLevel         ?: st.draft.srkLevel,
+                                causalHypothesis = parsed.causalHypothesis ?: st.draft.causalHypothesis,
+                                projection       = parsed.projection       ?: st.draft.projection,
+                                confidenceLevel  = parsed.confidenceLevel  ?: st.draft.confidenceLevel,
+                                knowledgeSource  = parsed.knowledgeSource  ?: st.draft.knowledgeSource,
+                            ))
+                        }
+                    }
+                    is SpeechInput.Event.Error -> { /* swallow — UI stays on manual entry */ }
+                }
+            }
         }
     }
 
