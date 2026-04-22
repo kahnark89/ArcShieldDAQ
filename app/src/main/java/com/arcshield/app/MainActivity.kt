@@ -7,7 +7,12 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.arcshield.app.capture.CaptureScreen
 import com.arcshield.app.home.HomeScreen
 import com.arcshield.app.onboarding.LlmSetupScreen
 import com.arcshield.app.security.ApiKeyStore
@@ -32,7 +37,18 @@ class MainActivity : ComponentActivity() {
                             modifier        = Modifier.padding(innerPadding),
                         )
                     } else {
-                        HomeScreen(modifier = Modifier.padding(innerPadding))
+                        var inCapture by remember { mutableStateOf(false) }
+                        if (inCapture) {
+                            CaptureScreen(
+                                onCycleComplete = { inCapture = false },
+                                modifier        = Modifier.padding(innerPadding),
+                            )
+                        } else {
+                            HomeScreen(
+                                onBeginCapture = { inCapture = true },
+                                modifier       = Modifier.padding(innerPadding),
+                            )
+                        }
                     }
                 }
             }

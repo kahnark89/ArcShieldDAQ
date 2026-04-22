@@ -32,8 +32,9 @@ import com.arcshield.app.preenv.ShiftPhase
 
 @Composable
 fun HomeScreen(
-    modifier:  Modifier = Modifier,
-    viewModel: HomeViewModel = hiltViewModel(),
+    onBeginCapture: () -> Unit,
+    modifier:       Modifier = Modifier,
+    viewModel:      HomeViewModel = hiltViewModel(),
 ) {
     val snapshot by viewModel.snapshot.collectAsStateWithLifecycle()
     var showStartShift by remember { mutableStateOf(false) }
@@ -55,18 +56,12 @@ fun HomeScreen(
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             if (shiftActive) {
                 OutlinedButton(onClick = viewModel::endShift) { Text("End shift") }
-                Button(onClick = { showBatchChange = true }) { Text("Change batch") }
+                OutlinedButton(onClick = { showBatchChange = true }) { Text("Change batch") }
+                Button(onClick = onBeginCapture) { Text("Capture event") }
             } else {
                 Button(onClick = { showStartShift = true }) { Text("Start shift") }
             }
         }
-
-        Spacer(Modifier.height(24.dp))
-        Text(
-            "Capture state machine lands in Phase 4.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 
     if (showStartShift) {
