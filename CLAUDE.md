@@ -4,8 +4,9 @@ This file is loaded automatically by Claude Code on every session in this
 repository. It establishes the architectural context and points at the
 full handoff document and reference materials.
 
-**Before doing anything in this project, read the handoff document:**
+**Before doing anything in this project, read the handoff documents:**
 @CLAUDE_CODE_HANDOFF.md
+@CLAUDE_CODE_HANDOFF_SENSORY.md
 
 ## Project at a glance
 
