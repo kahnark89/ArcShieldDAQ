@@ -7,6 +7,7 @@ full handoff document and reference materials.
 **Before doing anything in this project, read the handoff documents:**
 @CLAUDE_CODE_HANDOFF.md
 @CLAUDE_CODE_HANDOFF_SENSORY.md
+@arcshield-detection-spec.md
 
 ## Project at a glance
 
