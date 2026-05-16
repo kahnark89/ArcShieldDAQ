@@ -104,13 +104,22 @@ decided. Future sessions should not re-open them silently.
 - SENSORY handoff originally specified `com.capps.arcshield`; corrected
   in-place on 2026-05-16. Sensory module extracted with package rewrite.
 
-### C2. Biometric path: dual-path behind `BiometricSource`
-- Keep `PixelWatchBiometrics` (Health Connect, vendor neutrality).
-- Add `PolarBiometrics` (research-grade raw HRV) as a sibling
-  implementation when the fusion engine is built.
-- Validate empirically whether Health Connect HRV-RMSSD is usable for
-  Layer 2's HRV signal. If not, Polar is primary, Pixel Watch is the
-  daily-wear fallback. *Decision deferred until validation data exists.*
+### C2. Biometric path: Polar-only (RESOLVED 2026-05-16)
+- **Decision:** Pixel Watch and Empatica both removed. Only
+  `PolarBiometrics` remains, supporting Polar H10 (chest strap) and
+  Polar Verity Sense (armband) via the Polar BLE SDK 5.6.x.
+- **Why:** Kahn confirmed Pixel Watch reports HRV only during sleep
+  with no path to raw inter-beat intervals — fatal for an on-shift
+  fusion trigger. The earlier "vendor neutrality" framing
+  (HANDOFF.md decision 3) was based on the assumption that Health
+  Connect would expose usable beat-to-beat HRV, which it does not.
+- **Architectural impact:** `BiometricSource` interface kept, since
+  a future Empatica-class device (raw cEDA) may be added behind it.
+  The dual-path validation experiment is no longer needed.
+- **See:** `CLAUDE_CODE_HANDOFF_POLAR.md` for the swap details
+  (schema enum changes, manifest permission changes, Gradle/JitPack
+  wiring, RMSSD computation from RR intervals, device pairing
+  responsibilities).
 
 ### C3. Video capture: `VisualFrameProvider` abstraction (already in place)
 - Gen 1: `PhoneCameraFrameProvider` (CameraX + frame diff motion).
@@ -178,8 +187,15 @@ In priority order:
      classifier driving mode-based threshold per §7.7.
    - `BaselineTracker` extensions in `com.arcshield.app.bio` for
      gaze / hand / HRV / acoustic rolling baselines per §5.2.
-2. **`PolarBiometrics` implementation.** Behind existing
-   `BiometricSource` interface. Validates the dual-path decision (C2).
+2. ~~**`PolarBiometrics` implementation.**~~ **DONE 2026-05-16.** The
+   class is in place at
+   `app/src/main/java/com/arcshield/app/bio/source/PolarBiometrics.kt`
+   and bound as the active `BiometricSource`. What remains is
+   *lifecycle wiring*: a device-pairing flow in onboarding to persist
+   the device ID into `ConfigStore`, and a Hilt-injected lifecycle
+   observer in `MainActivity` / `ArcShieldApp` that calls
+   `biometricSource.start(deviceId)` on foreground and `stop()` on
+   background. Until that lands, snapshots are all null.
 3. **`ChipAndWakeWordAnnotationProvider` + `PhoneCameraFrameProvider`
    + `OpenMeteoThermalProvider`** — the three Gen 1 provider
    implementations the SENSORY handoff §3.1 calls for. Stub the Gen 2
@@ -221,12 +237,10 @@ In priority order:
 
 These came up during reconciliation and remain unanswered:
 
-1. **Pixel Watch HRV usability for fusion.** Detection spec asserts
-   consumer wearables hide the signal that Polar exposes. Does Health
-   Connect on Pixel Watch 4 expose HRV-RMSSD at sufficient temporal
-   resolution for Layer 2's HRV signal? Test path: log raw HRV-RMSSD
-   on a worn Pixel Watch during simulated insight moments; compare
-   variance to Polar H10.
+1. ~~**Pixel Watch HRV usability for fusion.**~~ **RESOLVED 2026-05-16.**
+   Pixel Watch surfaces HRV only during sleep with no path to raw
+   inter-beat intervals; not viable for an on-shift fusion trigger.
+   Path is now Polar-only — see `CLAUDE_CODE_HANDOFF_POLAR.md`.
 2. **Olfactory chip vocabulary.** SENSORY handoff §7.2 proposes
    `["burnt PVC", "metallic", "smoke", "normal", "other"]`. Confirm or
    extend for PPVC Line 1.

@@ -13,13 +13,18 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <!--
-        Health Connect permissions are declared here so the OS can surface
-        them in the Health Connect permission dialog. Actual runtime permission
-        requests happen in the biometric source layer (future phase).
+        Bluetooth: Polar BLE SDK pairing and streaming for H10 / Verity Sense.
+        BLUETOOTH_SCAN and BLUETOOTH_CONNECT are the Android 12+ (API 31+) split
+        of the legacy BLUETOOTH / BLUETOOTH_ADMIN permissions. neverForLocation
+        is declared because we do not derive location from BLE scan results.
     -->
-    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
-    <uses-permission android:name="android.permission.health.READ_HEART_RATE_VARIABILITY" />
-    <uses-permission android:name="android.permission.health.READ_EXERCISE" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation"
+        tools:targetApi="31" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"
+        tools:targetApi="31" />
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
 
     <application
         android:name=".ArcShieldApp"
@@ -38,10 +43,6 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-            <!-- Health Connect permissions rationale -->
-            <intent-filter>
-                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
             </intent-filter>
         </activity>
 

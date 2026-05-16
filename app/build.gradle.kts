@@ -84,8 +84,12 @@ dependencies {
     // Network
     implementation(libs.okhttp)
 
-    // Health Connect
-    implementation(libs.health.connect)
+    // Polar BLE SDK (HRV via H10 / Verity Sense). Bridges RxJava 3 Flowables to
+    // Kotlin Flow via kotlinx-coroutines-rx3 so the rest of the app stays
+    // RxJava-free per the project conventions.
+    implementation(libs.polar.ble.sdk)
+    implementation(libs.rxjava3)
+    implementation(libs.kotlinx.coroutines.rx3)
 
     // CameraX
     implementation(libs.camerax.core)

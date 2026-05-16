@@ -9,7 +9,8 @@ kotlinx-serialization = "1.7.3"
 kotlinx-coroutines    = "1.9.0"
 security-crypto       = "1.1.0-alpha06"
 okhttp                = "4.12.0"
-health-connect        = "1.1.0-rc01"
+polar-ble-sdk         = "5.6.0"
+rxjava3               = "3.1.8"
 camerax               = "1.4.1"
 work                  = "2.10.0"
 hilt-work             = "1.2.0"
@@ -54,8 +55,12 @@ security-crypto                 = { group = "androidx.security",     name = "sec
 # Network
 okhttp                          = { group = "com.squareup.okhttp3",  name = "okhttp",                       version.ref = "okhttp" }
 
-# Health Connect
-health-connect                  = { group = "androidx.health.connect", name = "connect-client",             version.ref = "health-connect" }
+# Polar BLE SDK (research-grade HRV from H10 chest strap and Verity Sense armband).
+# Hosted on JitPack — see settings.gradle.kts. The SDK exposes RxJava 3 Flowables;
+# kotlinx-coroutines-rx3 bridges them to Kotlin Flow for the rest of the app.
+polar-ble-sdk                   = { group = "com.github.polarofficial.polar-ble-sdk", name = "sdk",       version.ref = "polar-ble-sdk" }
+rxjava3                         = { group = "io.reactivex.rxjava3", name = "rxjava",                       version.ref = "rxjava3" }
+kotlinx-coroutines-rx3          = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-rx3",      version.ref = "kotlinx-coroutines" }
 
 # CameraX
 camerax-core                    = { group = "androidx.camera",       name = "camera-core",                  version.ref = "camerax" }

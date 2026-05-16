@@ -56,10 +56,11 @@ enum class TriggerSource {
 enum class TriggerChannel {
     @SerialName("hr_deviation")        HR_DEVIATION,
     @SerialName("hrv_rmssd_deviation") HRV_RMSSD_DEVIATION,
-    @SerialName("body_response")       BODY_RESPONSE,
     @SerialName("gaze_dwell")          GAZE_DWELL,
     @SerialName("operator_button")     OPERATOR_BUTTON,
     @SerialName("acoustic_anomaly")    ACOUSTIC_ANOMALY,
+    @SerialName("hand_pose")           HAND_POSE,
+    @SerialName("fusion_threshold")    FUSION_THRESHOLD,
 }
 
 @Serializable
@@ -193,7 +194,7 @@ data class BiometricSnapshot(
     @SerialName("hrv_rmssd_ms")        val hrvRmssdMs: Double? = null,
     @SerialName("hrv_deviation_z")     val hrvDeviationZ: Double? = null,
     @SerialName("activity_class")      val activityClass: ActivityClass? = null,
-    @SerialName("body_response_fired") val bodyResponseFired: Boolean? = null,
+    @SerialName("skin_temp_c")         val skinTempC: Double? = null,
     @SerialName("eda_microsiemens")    val edaMicrosiemens: Double? = null,
     @SerialName("source_device")       val sourceDevice: SourceDevice? = null,
 )
@@ -209,9 +210,9 @@ enum class ActivityClass {
 
 @Serializable
 enum class SourceDevice {
-    @SerialName("pixel_watch_4")        PIXEL_WATCH_4,
-    @SerialName("empatica_embraceplus") EMPATICA_EMBRACEPLUS,
-    @SerialName("other")                OTHER,
+    @SerialName("polar_h10")           POLAR_H10,
+    @SerialName("polar_verity_sense")  POLAR_VERITY_SENSE,
+    @SerialName("other")               OTHER,
 }
 
 @Serializable
@@ -231,8 +232,8 @@ enum class PovSource {
 
 @Serializable
 enum class BiometricSourceTag {
-    @SerialName("pixel_watch_4")        PIXEL_WATCH_4,
-    @SerialName("empatica_embraceplus") EMPATICA_EMBRACEPLUS,
-    @SerialName("none")                 NONE,
-    @SerialName("other")                OTHER,
+    @SerialName("polar_h10")           POLAR_H10,
+    @SerialName("polar_verity_sense")  POLAR_VERITY_SENSE,
+    @SerialName("none")                NONE,
+    @SerialName("other")               OTHER,
 }
