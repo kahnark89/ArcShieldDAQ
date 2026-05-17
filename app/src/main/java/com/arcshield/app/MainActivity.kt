@@ -14,15 +14,19 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.arcshield.app.bio.source.BiometricSource
 import com.arcshield.app.capture.CapturePhase
 import com.arcshield.app.capture.CaptureScreen
 import com.arcshield.app.capture.CaptureViewModel
 import com.arcshield.app.home.HomeScreen
 import com.arcshield.app.onboarding.LlmSetupScreen
+import com.arcshield.app.onboarding.PolarPairingScreen
+import com.arcshield.app.preenv.PreEnvPrefsStore
 import com.arcshield.app.security.ApiKeyStore
 import com.arcshield.app.trigger.FusionEngine
 import com.arcshield.app.ui.theme.ArcShieldTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -31,6 +35,8 @@ class MainActivity : ComponentActivity() {
 
     @Inject lateinit var apiKeyStore: ApiKeyStore
     @Inject lateinit var fusionEngine: FusionEngine
+    @Inject lateinit var biometricSource: BiometricSource
+    @Inject lateinit var preEnvPrefsStore: PreEnvPrefsStore
 
     private val captureViewModel: CaptureViewModel by viewModels()
 
@@ -38,10 +44,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Layer 2 — collect fusion triggers while the activity is at least
-        // STARTED and route them into the capture state machine. The engine's
-        // own 10 s lockout and the ViewModel's IDLE check together prevent
-        // re-fires from clobbering an in-progress draft.
+        // Layer 2 — collect fusion triggers while the activity is at least STARTED.
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 fusionEngine.triggers.collect { event ->
@@ -50,30 +53,55 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        // Polar BLE lifecycle — connect when deviceId is set, disconnect on background.
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                preEnvPrefsStore.polarDeviceId.collectLatest { deviceId ->
+                    if (deviceId == null) {
+                        biometricSource.stop()
+                        return@collectLatest
+                    }
+                    biometricSource.start(deviceId)
+                    try {
+                        kotlinx.coroutines.awaitCancellation()
+                    } finally {
+                        biometricSource.stop()
+                    }
+                }
+            }
+        }
+
         setContent {
             ArcShieldTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    if (!apiKeyStore.isConfigured()) {
-                        LlmSetupScreen(
-                            onSetupComplete = { recreate() },
-                            modifier        = Modifier.padding(innerPadding),
-                        )
-                    } else {
-                        val state by captureViewModel.state.collectAsStateWithLifecycle()
-                        if (state.phase != CapturePhase.IDLE) {
-                            CaptureScreen(
-                                // No-op: a successful submit() sets state to IDLE which auto-switches
-                                // back to HomeScreen via the observation above. A failed submit keeps
-                                // the draft and surfaces lastSaveError. Manual cancel calls
-                                // viewModel.cancel() directly inside CaptureScreen.
-                                onCycleComplete = {},
+                    val polarDeviceId by preEnvPrefsStore.polarDeviceId
+                        .collectAsStateWithLifecycle(initialValue = null)
+
+                    when {
+                        !apiKeyStore.isConfigured() -> {
+                            LlmSetupScreen(
+                                onSetupComplete = { recreate() },
                                 modifier        = Modifier.padding(innerPadding),
                             )
-                        } else {
-                            HomeScreen(
-                                onBeginCapture = { captureViewModel.startCycle() },
-                                modifier       = Modifier.padding(innerPadding),
+                        }
+                        polarDeviceId == null -> {
+                            PolarPairingScreen(
+                                modifier = Modifier.padding(innerPadding),
                             )
+                        }
+                        else -> {
+                            val state by captureViewModel.state.collectAsStateWithLifecycle()
+                            if (state.phase != CapturePhase.IDLE) {
+                                CaptureScreen(
+                                    onCycleComplete = {},
+                                    modifier        = Modifier.padding(innerPadding),
+                                )
+                            } else {
+                                HomeScreen(
+                                    onBeginCapture = { captureViewModel.startCycle() },
+                                    modifier       = Modifier.padding(innerPadding),
+                                )
+                            }
                         }
                     }
                 }

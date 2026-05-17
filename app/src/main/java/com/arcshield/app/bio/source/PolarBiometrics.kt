@@ -16,9 +16,11 @@ import io.reactivex.rxjava3.disposables.Disposable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.rx3.asFlow
@@ -117,6 +119,15 @@ class PolarBiometrics @Inject constructor(
     override suspend fun stop() = mutex.withLock { stopInternal() }
 
     override suspend fun currentSnapshot(): BiometricSnapshot = _snapshots.value
+
+    override fun scanForDevices(): Flow<BiometricSource.ScannedDevice> =
+        api.searchForDevice().asFlow().map { info ->
+            BiometricSource.ScannedDevice(
+                deviceId = info.deviceId,
+                name     = info.name ?: "Unknown",
+                rssi     = info.rssi,
+            )
+        }
 
     private fun stopInternal() {
         hrSubscription?.dispose(); hrSubscription = null

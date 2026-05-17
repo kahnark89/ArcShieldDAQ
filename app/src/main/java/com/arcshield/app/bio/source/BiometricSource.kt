@@ -1,6 +1,7 @@
 package com.arcshield.app.bio.source
 
 import com.arcshield.app.data.schema.BiometricSnapshot
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -43,4 +44,14 @@ interface BiometricSource {
      */
     suspend fun start(deviceId: String)
     suspend fun stop()
+
+    /**
+     * Scans for nearby BLE devices compatible with this biometric source.
+     * Emits discovered devices as they are found. Callers should cancel the
+     * collection after a suitable timeout (e.g. 10 seconds).
+     */
+    fun scanForDevices(): Flow<ScannedDevice>
+
+    /** Transport-agnostic descriptor for a discovered biometric device. */
+    data class ScannedDevice(val deviceId: String, val name: String, val rssi: Int)
 }

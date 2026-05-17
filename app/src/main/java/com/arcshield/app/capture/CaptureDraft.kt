@@ -61,6 +61,7 @@ data class CaptureDraft(
     val escalationDelta:     String? = null,
     val hypothesisConfirmed: Boolean = false,
     val productQualityImpact: String? = null,
+    val graphWeight:          Double = 0.5,
 ) {
     fun finalize(preEnv: PreEnvSnapshot, nowIso: () -> String): CiaerPlusEvent {
         val cause = Cause(
@@ -101,6 +102,7 @@ data class CaptureDraft(
             escalationDelta      = escalationDelta,
             hypothesisConfirmed  = hypothesisConfirmed,
             productQualityImpact = productQualityImpact,
+            graphWeight          = graphWeight,
         )
         return CiaerPlusEvent(
             eventId       = eventId,
