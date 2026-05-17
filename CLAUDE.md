@@ -232,58 +232,74 @@ retrieval. Convert lazily, not pre-emptively.
   addendum.
 - **Layer 2 fusion engine** at `com.arcshield.app.trigger.*` —
   `FusionEngine` (200 ms tick, weighted sum, lockout, counter mode),
-  `TriggerEvent`, `OperationalModeDetector` (steady-only stub),
-  scorer interfaces (`HrvScorer` / `GazeHandScorer` / `AcousticScorer`)
-  with one real impl (`DefaultHrvScorer` via `PolarBiometrics`) and
-  two no-ops, Hilt module, unit tests under `app/src/test/`.
-  (Added 2026-05-17.)
+  `TriggerEvent`, scorer interfaces and impls (see below), Hilt
+  module, unit tests under `app/src/test/`. (Added 2026-05-17.)
 - **Kotlin/schema sync for `Cause.trigger_context`** — Kotlin
   `Cause` now carries the `triggerContext: TriggerContext?` field
-  and the supporting types (`TriggerContext`, `TriggerType`,
-  `SignalScores`, `OperationalMode`, `TriggerSensorContext`,
-  `TriggerFeedback`) all serialize to the snake_case shape the
-  schema's `#/$defs/TriggerContext` declares. Round-trip test under
-  `app/src/test/java/com/arcshield/app/data/schema/`.
+  and the supporting types serialize to the snake_case schema shape.
+  Round-trip test under `app/src/test/java/com/arcshield/app/data/schema/`.
   (Added 2026-05-17.)
 - **Fusion → state-machine wiring** — `MainActivity` collects
   `FusionEngine.triggers` in a `repeatOnLifecycle(STARTED)` scope and
-  dispatches into `CaptureViewModel.fireCauseFromTrigger()`, which
-  populates `CaptureDraft.triggerContext` so the field reaches
-  `Cause.trigger_context` at submission. The home↔capture screen
-  switch is now driven by observing `state.phase`, so an automatic
-  fire pulls the operator into CaptureScreen even from HomeScreen.
+  dispatches into `CaptureViewModel.fireCauseFromTrigger()`. Screen
+  switch is driven by `state.phase`. (Added 2026-05-17.)
+- **PolarBiometrics lifecycle wiring** — `PolarPairingScreen` /
+  `PolarPairingViewModel` added to onboarding; 10-second BLE scan +
+  device selection persists `polar_device_id` to `PreEnvPrefsStore`.
+  `BiometricSource.scanForDevices()` added to interface;
+  `PolarBiometrics` implements it via `api.searchForDevice().asFlow()`.
+  `MainActivity` collects `polarDeviceId` with `collectLatest` in a
+  `repeatOnLifecycle(STARTED)` block — calls `start(deviceId)` on
+  foreground and `stop()` in `finally` on background. Pairing screen
+  is shown between LLM setup and HomeScreen when no deviceId persisted.
   (Added 2026-05-17.)
+- **Sensory provider implementations** —
+  `OpenMeteoThermalProvider` (OkHttp + 15-min cache, Helena-West Helena
+  defaults), `ChipAndWakeWordAnnotationProvider` (in-memory annotation,
+  vocabulary constant for UI chips), `PhoneCameraFrameProvider` (CameraX
+  `ImageCapture` bound to `ProcessLifecycleOwner`, saves JPEG to
+  `getExternalFilesDir("frames")`). `SensoryModule` (Hilt) wires all
+  three providers plus all five channels into a singleton
+  `SensoryCaptureManager`. (Added 2026-05-17.)
+- **`DefaultAcousticScorer`** — FFT z-score anomaly scorer wrapping
+  `AcousticChannel`; rolling ring buffer of 18 snapshots (~3 min);
+  score 1.0 at ≥2σ deviation in spectral centroid or amplitude per
+  detection-spec §3.4. Replaces `NoOpAcousticScorer` in
+  `FusionEngineModule`. (Added 2026-05-17.)
+- **Sensory baseline wiring** — `ArcShieldApp.onCreate()` calls
+  `sensoryCaptureManager.initialize()`; `ManualPreEnvSource.recordShiftStart()`
+  calls `captureBaseline()` and persists the JSON to `PreEnvPrefsStore`
+  (`sensory_baseline_json` key); `PreEnvTracker` decodes and attaches
+  it as `PreEnvSnapshot.sensoryBaseline` on every snapshot emission.
+  (Added 2026-05-17.)
+- **`SensoryEventRepository`** — assembles `CiaerPlusEvent` from
+  `CaptureDraft`, computes `graph_weight` (+0.20 hypothesisConfirmed,
+  +0.15 PREVENTED/RESOLVED, −0.10 SKILL, clamped [0.10, 1.00]),
+  persists to Room via `EventDao`. `CaptureViewModel.submit()` now
+  delegates here instead of calling `CorpusSink` directly.
+  `CaptureDraft` gains a `graphWeight` field. (Added 2026-05-17.)
+- **`OperationalModeDetector` real classifier** — injects
+  `PreEnvSource` + `EventDao` + `Json`; returns SETUP when
+  `shiftPhase == STARTUP`, TROUBLESHOOTING when any of the last 3
+  events within 10 min has `outcomeTag` WORSE or NO_CHANGE, otherwise
+  STEADY. `currentMode()` is now `suspend`. (Added 2026-05-17.)
 
 **Not yet built:**
-- Concrete sensory / fusion provider implementations:
-  `PhoneCameraFrameProvider` (CameraX + MediaPipe hand pose + gaze
-  estimation — unblocks real `GazeHandScorer`),
-  `ChipAndWakeWordAnnotationProvider`, `OpenMeteoThermalProvider`,
-  and an MFCC-baseline acoustic anomaly scorer that wraps
-  `AcousticChannel` (unblocks real `AcousticScorer`). Until both
-  land the fusion engine cannot reach the 0.75 immediate threshold
-  on HRV alone (weight 0.20) and won't auto-fire — manual capture
-  still works.
-- `PolarBiometrics` lifecycle wiring: the class is built and DI-bound,
-  but nobody calls `start(deviceId)` yet. Needs (a) a device-pairing
-  flow in onboarding that persists the device ID into `ConfigStore`,
-  and (b) a Hilt-injected lifecycle observer in `MainActivity` (or
-  `ArcShieldApp`) that calls `start()` on foreground and `stop()` on
-  background. Until this lands, snapshots will all be null and
-  `DefaultHrvScorer` returns null.
-- `SensoryEventRepository` wiring.
-- `ManualPreEnvSource.captureShiftStart` → `SensoryCaptureManager`
-  hook.
-- `OperationalModeDetector` real classifier (setup / steady /
-  troubleshooting per detection-spec §5.5 / §7.7). Stub today.
+- `GazeHandScorer` real implementation: `PhoneCameraFrameProvider`
+  captures frames but MediaPipe hand-pose + gaze estimation not yet
+  wired. `NoOpGazeHandScorer` still in place — gaze (0.35) + hand
+  (0.25) = 0.60 of fusion weight still dark. Auto-fire impossible
+  until this lands.
+- `PolarBiometrics.start()` pairing test: code is complete; first
+  real test requires physical Polar H10 or Verity Sense hardware.
+- `ManualPreEnvSource.captureShiftStart` UI hookup — a shift-start
+  screen is needed to call `recordShiftStart()` and trigger the
+  sensory baseline capture.
 - Dynamic threshold adjustment loop (detection-spec §7.5) — needs
-  FP/TP labels from the web dashboard before it can do anything.
-- Backend: `arcshield-corpus` server. Two roles confirmed
-  2026-05-17: (a) event corpus + RAG, (b) **host the web dashboard**
-  (event review, sensor replay, threshold tuning, true/false-positive
-  labeling). The dashboard depends on it, so the server is needed
-  earlier than originally framed. Separate repo; not bootstrapped
-  yet.
+  FP/TP labels from the web dashboard.
+- Backend: `arcshield-corpus` server. Two roles: (a) event corpus +
+  RAG, (b) web dashboard (event review, sensor replay, threshold
+  tuning, FP/TP labeling). Separate repo; not bootstrapped yet.
 
 ## Working with Kahn
 
@@ -312,6 +328,24 @@ Resolved (do not re-open without flagging):
 
 ## Change log
 
+- **2026-05-17 (session 2)** — Items 1-5 from priority implementation plan.
+  PolarBiometrics lifecycle wired: `PolarPairingScreen` / `PolarPairingViewModel`
+  added (BLE scan, device selection, DataStore persistence); `BiometricSource`
+  gains `ScannedDevice` + `scanForDevices()`; `PolarBiometrics` implements it
+  via `api.searchForDevice().asFlow()`; `MainActivity` uses `collectLatest` on
+  `polarDeviceId` to call `start()`/`stop()` around the STARTED lifecycle.
+  Sensory providers built: `OpenMeteoThermalProvider`, `ChipAndWakeWordAnnotation-
+  Provider`, `PhoneCameraFrameProvider` (CameraX + ProcessLifecycleOwner);
+  `SensoryModule` (Hilt) wires all into `SensoryCaptureManager` singleton.
+  `DefaultAcousticScorer` replaces `NoOpAcousticScorer` in `FusionEngineModule`
+  (FFT z-score ring buffer, 18-sample ~3 min baseline, ≥2σ → score 1.0).
+  Sensory baseline wired end-to-end: `ArcShieldApp` calls `initialize()`,
+  `ManualPreEnvSource.recordShiftStart()` calls `captureBaseline()` + persists
+  JSON to `PreEnvPrefsStore`; `PreEnvTracker` decodes and attaches to snapshot.
+  `SensoryEventRepository` created: assembles `CiaerPlusEvent` with `graph_weight`
+  computation, persists to Room; `CaptureViewModel` delegates to it.
+  `OperationalModeDetector` real classifier: SETUP/STEADY/TROUBLESHOOTING based
+  on shift phase + recent event outcomes; `currentMode()` now `suspend`.
 - **2026-05-17** — Layer 2 fusion engine + architecture lock-in.
   Added `com.arcshield.app.trigger.*` package: `FusionEngine`
   (weighted-sum, 200 ms tick, immediate/counter fire rules, 10 s
