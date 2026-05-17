@@ -101,4 +101,8 @@ dependencies {
     implementation(libs.work.runtime.ktx)
     implementation(libs.hilt.work)
     ksp(libs.hilt.work.compiler)
+
+    // Unit tests (src/test/) — JVM only, no device required.
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

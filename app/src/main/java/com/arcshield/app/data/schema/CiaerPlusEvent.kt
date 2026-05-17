@@ -41,6 +41,53 @@ data class Cause(
     @SerialName("visual_anchor_description") val visualAnchorDescription: String? = null,
     @SerialName("visual_anchor_frame_ref")   val visualAnchorFrameRef: String? = null,
     @SerialName("acoustic_profile")          val acousticProfile: String? = null,
+    @SerialName("trigger_context")           val triggerContext: TriggerContext? = null,
+)
+
+@Serializable
+data class TriggerContext(
+    @SerialName("trigger_type")       val triggerType: TriggerType? = null,
+    @SerialName("confidence_score")   val confidenceScore: Double? = null,
+    @SerialName("signal_scores")      val signalScores: SignalScores? = null,
+    @SerialName("temporal_modifier")  val temporalModifier: Double? = null,
+    @SerialName("operational_mode")   val operationalMode: OperationalMode? = null,
+    @SerialName("threshold_at_fire")  val thresholdAtFire: Double? = null,
+    @SerialName("sensor_context")     val sensorContext: TriggerSensorContext? = null,
+    @SerialName("feedback")           val feedback: TriggerFeedback? = null,
+)
+
+@Serializable
+enum class TriggerType {
+    @SerialName("automatic") AUTOMATIC,
+    @SerialName("manual")    MANUAL,
+}
+
+@Serializable
+data class SignalScores(
+    @SerialName("gaze")     val gaze: Double? = null,
+    @SerialName("hand")     val hand: Double? = null,
+    @SerialName("hrv")      val hrv: Double? = null,
+    @SerialName("acoustic") val acoustic: Double? = null,
+)
+
+@Serializable
+enum class OperationalMode {
+    @SerialName("setup")           SETUP,
+    @SerialName("steady")          STEADY,
+    @SerialName("troubleshooting") TROUBLESHOOTING,
+}
+
+@Serializable
+data class TriggerSensorContext(
+    @SerialName("video_clip_url")     val videoClipUrl: String? = null,
+    @SerialName("audio_clip_url")     val audioClipUrl: String? = null,
+    @SerialName("biometric_snapshot") val biometricSnapshot: BiometricSnapshot? = null,
+)
+
+@Serializable
+data class TriggerFeedback(
+    @SerialName("operator_validated") val operatorValidated: Boolean? = null,
+    @SerialName("notes")              val notes: String? = null,
 )
 
 @Serializable

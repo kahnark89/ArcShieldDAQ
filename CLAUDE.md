@@ -47,6 +47,12 @@ structures events into the CIAER+ schema, and syncs them to a Python
 corpus server (separate repo `arcshield-corpus`, not yet existing).
 Current deployment target is PPVC Line 1 at Hollowell Industries.
 
+**The system is exactly two units:** this Android app and one server
+(`arcshield-corpus`). The server holds the event corpus and hosts the
+web dashboard used for review, tuning, and validation feedback. The
+app does no review UI — capture-only. See "Unified architecture"
+under Non-negotiable architectural principles below.
+
 ## Non-negotiable architectural principles
 
 1. **CIAER+ schema is the single source of truth.** It lives at
@@ -93,7 +99,19 @@ Current deployment target is PPVC Line 1 at Hollowell Industries.
 7. **Fusion runs on-device, not on the backend.** Layer 2 trigger
    logic (weighted-sum fusion per detection spec §4) executes on the
    phone for latency and offline resilience. Backend role is storage,
-   RAG, and later LoRA training only.
+   RAG, web dashboard, and later LoRA training only.
+
+8. **Unified architecture: one app + one server, no in-app dashboard.**
+   The system is exactly two units. This Android repo is capture-only
+   — there is no in-app review UI, no in-app threshold tuning, no
+   in-app sensor replay. Operator review, true/false-positive
+   labeling, threshold tuning, and analytics all live in the web
+   dashboard hosted by `arcshield-corpus`. This keeps the app focused
+   on a single role (run on shift, fire fusion, capture CIAER) and
+   puts everything that benefits from a desktop browser (sensor
+   replay, knowledge graph) where the screen is large enough. The
+   server is therefore needed earlier than originally framed — the
+   dashboard depends on it. (Decided 2026-05-17.)
 
 For full rationale on each principle, see the handoff documents.
 
@@ -108,8 +126,19 @@ The full diagram is in `CLAUDE_CODE_HANDOFF_INTEGRATION.md`.
   Code: `com.arcshield.app.sensory.*`.
 - **Layer 2 — Fusion trigger:** weighted-sum of gaze + hand + HRV +
   acoustic operator-state signals; threshold crossing fires the state
-  machine. *Not yet implemented.* Target package
-  `com.arcshield.app.trigger`.
+  machine. Code: `com.arcshield.app.trigger.*` — `FusionEngine`
+  ticks every 200 ms, computes
+  `0.35·gaze + 0.25·hand + 0.20·hrv + 0.20·acoustic`, fires
+  immediately at ≥ 0.75 or after 3 near-hits (≥ 0.60) within 10 s,
+  with a 10 s lockout per detection spec §4. Consumes the three
+  signal-scorer interfaces (`HrvScorer`, `GazeHandScorer`,
+  `AcousticScorer`) — only `DefaultHrvScorer` (driven by
+  `PolarBiometrics`) is wired today; the gaze/hand and acoustic
+  scorers are bound to no-op implementations until the underlying
+  detectors (MediaPipe hand pose + gaze estimation, MFCC anomaly)
+  land. With the no-ops in place HRV alone caps the fusion score at
+  0.20 and the engine cannot fire — manual capture still works via
+  `CaptureViewModel.startCycle()`. (Added 2026-05-17.)
 - **Layer 3 — CIAER+ capture flow:** 5-phase state machine
   (Cause → Intuition → Action → Effect → Result + ShadowActions).
   Code: `com.arcshield.app.capture.*`.
@@ -167,6 +196,9 @@ retrieval. Convert lazily, not pre-emptively.
   starts later, add a new `BiometricSource` implementation then).
 - Meta glasses capture (stub only until hardware arrives).
 - Python corpus server (separate repo `arcshield-corpus`, see C6).
+- **In-app review / dashboard / threshold-tuning / sensor-replay UI**
+  (removed 2026-05-17 — these all live in the web dashboard hosted by
+  `arcshield-corpus`; the Android app is capture-only).
 - LoRA training code (server-side only).
 - Twin marketplace logic (separate layer, future work).
 - EEG / neural pattern discovery (detection spec Phase 8 — defer
@@ -175,16 +207,17 @@ retrieval. Convert lazily, not pre-emptively.
   is the sole operator on his own line for the foreseeable future
   (confirmed 2026-05-16).
 
-## Current repo state (as of 2026-05-16)
+## Current repo state (as of 2026-05-17)
 
 **Done:**
 - Gradle scaffolding: project + app `build.gradle.kts`,
   `settings.gradle.kts`, `gradle.properties`, `gradlew` wrapper.
-- `AndroidManifest.xml` and `MainActivity.kt`.
+- `AndroidManifest.xml` and `MainActivity.kt` (the latter now hosts
+  the fusion-trigger lifecycle observer — see below).
 - Package skeleton under `com.arcshield.app`: 55+ Kotlin files
   spanning `bio/`, `capture/`, `data/`, `home/`, `llm/`,
-  `onboarding/`, `preenv/`, `security/`, `sync/`, `twin/`, `ui/`,
-  `vision/`, `voice/`.
+  `onboarding/`, `preenv/`, `security/`, `sync/`, `trigger/`,
+  `twin/`, `ui/`, `vision/`, `voice/`.
 - `schema/ciaer_plus_v1.json` (extended 2026-05-16 with
   `Cause.trigger_context`, `PreEnv.sensory_baseline`, and $defs for
   `TriggerContext`, `SensoryBundle`, `AcousticSnapshot`,
@@ -193,35 +226,64 @@ retrieval. Convert lazily, not pre-emptively.
 - Sensory module (Layer 1): 16 Kotlin files at
   `com.arcshield.app.sensory.*` covering channels, providers
   interfaces, FFT processor, bundle / snapshot / delta types, and the
-  `SensoryCaptureManager` orchestrator. Extracted from
-  `arcshield_sensory_module.zip` on 2026-05-16 with package rewrite
-  from `com.capps.arcshield`.
-- `PreEnvSnapshot.kt` carries `sensoryBaseline: SensoryBundle?`
-  (added 2026-05-16).
+  `SensoryCaptureManager` orchestrator.
+- `PreEnvSnapshot.kt` carries `sensoryBaseline: SensoryBundle?`.
 - `docs/` folder with reference whitepapers and the marketplace
-  addendum (moved from repo root 2026-05-16).
+  addendum.
+- **Layer 2 fusion engine** at `com.arcshield.app.trigger.*` —
+  `FusionEngine` (200 ms tick, weighted sum, lockout, counter mode),
+  `TriggerEvent`, `OperationalModeDetector` (steady-only stub),
+  scorer interfaces (`HrvScorer` / `GazeHandScorer` / `AcousticScorer`)
+  with one real impl (`DefaultHrvScorer` via `PolarBiometrics`) and
+  two no-ops, Hilt module, unit tests under `app/src/test/`.
+  (Added 2026-05-17.)
+- **Kotlin/schema sync for `Cause.trigger_context`** — Kotlin
+  `Cause` now carries the `triggerContext: TriggerContext?` field
+  and the supporting types (`TriggerContext`, `TriggerType`,
+  `SignalScores`, `OperationalMode`, `TriggerSensorContext`,
+  `TriggerFeedback`) all serialize to the snake_case shape the
+  schema's `#/$defs/TriggerContext` declares. Round-trip test under
+  `app/src/test/java/com/arcshield/app/data/schema/`.
+  (Added 2026-05-17.)
+- **Fusion → state-machine wiring** — `MainActivity` collects
+  `FusionEngine.triggers` in a `repeatOnLifecycle(STARTED)` scope and
+  dispatches into `CaptureViewModel.fireCauseFromTrigger()`, which
+  populates `CaptureDraft.triggerContext` so the field reaches
+  `Cause.trigger_context` at submission. The home↔capture screen
+  switch is now driven by observing `state.phase`, so an automatic
+  fire pulls the operator into CaptureScreen even from HomeScreen.
+  (Added 2026-05-17.)
 
 **Not yet built:**
-- Layer 2 fusion engine (`com.arcshield.app.trigger.*`) — weighted
-  sum of gaze/hand/HRV/acoustic per detection-spec §4. Consumes
-  `BiometricSource` + `VisualFrameProvider` + `AcousticChannel`,
-  emits `Flow<TriggerEvent>` into the state machine.
-- Concrete sensory provider implementations:
-  `PhoneCameraFrameProvider`, `ChipAndWakeWordAnnotationProvider`,
-  `OpenMeteoThermalProvider`.
+- Concrete sensory / fusion provider implementations:
+  `PhoneCameraFrameProvider` (CameraX + MediaPipe hand pose + gaze
+  estimation — unblocks real `GazeHandScorer`),
+  `ChipAndWakeWordAnnotationProvider`, `OpenMeteoThermalProvider`,
+  and an MFCC-baseline acoustic anomaly scorer that wraps
+  `AcousticChannel` (unblocks real `AcousticScorer`). Until both
+  land the fusion engine cannot reach the 0.75 immediate threshold
+  on HRV alone (weight 0.20) and won't auto-fire — manual capture
+  still works.
 - `PolarBiometrics` lifecycle wiring: the class is built and DI-bound,
   but nobody calls `start(deviceId)` yet. Needs (a) a device-pairing
   flow in onboarding that persists the device ID into `ConfigStore`,
   and (b) a Hilt-injected lifecycle observer in `MainActivity` (or
   `ArcShieldApp`) that calls `start()` on foreground and `stop()` on
-  background. Until this lands, snapshots will all be null.
+  background. Until this lands, snapshots will all be null and
+  `DefaultHrvScorer` returns null.
 - `SensoryEventRepository` wiring.
 - `ManualPreEnvSource.captureShiftStart` → `SensoryCaptureManager`
   hook.
-- Backend: `arcshield-corpus` server. Per Kahn (2026-05-16) the
-  server will do schema ingestion **and** push prompts to the Meta
-  glasses — so it ends up being the prompt router, not just storage.
-  Separate repo; not bootstrapped yet.
+- `OperationalModeDetector` real classifier (setup / steady /
+  troubleshooting per detection-spec §5.5 / §7.7). Stub today.
+- Dynamic threshold adjustment loop (detection-spec §7.5) — needs
+  FP/TP labels from the web dashboard before it can do anything.
+- Backend: `arcshield-corpus` server. Two roles confirmed
+  2026-05-17: (a) event corpus + RAG, (b) **host the web dashboard**
+  (event review, sensor replay, threshold tuning, true/false-positive
+  labeling). The dashboard depends on it, so the server is needed
+  earlier than originally framed. Separate repo; not bootstrapped
+  yet.
 
 ## Working with Kahn
 
@@ -250,6 +312,34 @@ Resolved (do not re-open without flagging):
 
 ## Change log
 
+- **2026-05-17** — Layer 2 fusion engine + architecture lock-in.
+  Added `com.arcshield.app.trigger.*` package: `FusionEngine`
+  (weighted-sum, 200 ms tick, immediate/counter fire rules, 10 s
+  lockout per detection-spec §4), `TriggerEvent`,
+  `OperationalModeDetector` (steady-only stub), the three signal
+  scorer interfaces (`HrvScorer`, `GazeHandScorer`, `AcousticScorer`)
+  with `DefaultHrvScorer` driving off `BiometricSource` /
+  `BaselineTracker` and no-op fallbacks for the other two,
+  `FusionEngineModule` (Hilt), and unit tests covering no-fire /
+  immediate / counter / lockout / null-signal cases. Synced Kotlin
+  `Cause` data class to the schema's pre-existing
+  `Cause.trigger_context` field — added `TriggerContext`,
+  `TriggerType`, `SignalScores`, `OperationalMode`,
+  `TriggerSensorContext`, `TriggerFeedback` data classes with
+  matching snake_case `@SerialName` mappings; added a serialization
+  round-trip test. Wired the engine into the capture state machine:
+  `MainActivity` injects `FusionEngine` and collects its `triggers`
+  flow inside `repeatOnLifecycle(STARTED)`, dispatching to
+  `CaptureViewModel.fireCauseFromTrigger()`. The home↔capture screen
+  switch is now driven by observing `state.phase`, so a fire while
+  the operator is on HomeScreen pulls them into CaptureScreen
+  automatically. Added test deps (`junit`, `kotlinx-coroutines-test`)
+  to `libs.versions.toml` and `app/build.gradle.kts`. Locked the
+  architecture: one Android app + one server (`arcshield-corpus`),
+  no in-app dashboard — operator review and threshold tuning happen
+  in the web dashboard hosted by the server. Recorded as
+  Non-negotiable principle #8 and an additional "NOT in scope"
+  bullet.
 - **2026-05-16 (PM)** — Biometric path swap. Pixel Watch and Empatica
   removed entirely; replaced with `PolarBiometrics` (Polar BLE SDK,
   supports H10 + Verity Sense). Schema `BiometricSnapshot.source_device`

@@ -10,9 +10,12 @@ import com.arcshield.app.data.schema.OutcomeTag
 import com.arcshield.app.data.schema.PredictionMatch
 import com.arcshield.app.data.schema.ShadowAction
 import com.arcshield.app.data.schema.SrkLevel
+import com.arcshield.app.data.schema.TriggerChannel
+import com.arcshield.app.data.schema.TriggerSource
 import com.arcshield.app.llm.IntuitionParser
 import com.arcshield.app.preenv.source.PreEnvSource
 import com.arcshield.app.sync.CorpusSink
+import com.arcshield.app.trigger.TriggerEvent
 import com.arcshield.app.vision.GaugeReader
 import com.arcshield.app.voice.SpeechInput
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -52,6 +55,28 @@ class CaptureViewModel @Inject constructor(
         _state.value = State(
             phase = CapturePhase.CAUSE,
             draft = CaptureDraft(causeCapturedAt = nowIso()),
+        )
+    }
+
+    /**
+     * Layer 2 entry point. Called by the foreground host when [FusionEngine]
+     * emits a [TriggerEvent]. Transitions the state machine from IDLE into
+     * CAUSE and stashes the fusion context for later attachment to
+     * `Cause.triggerContext` at submission. Ignored if the operator is
+     * already mid-cycle — the fusion engine's own 10 s lockout prevents
+     * fire spam, but a stray trigger after the operator manually started
+     * a cycle should not corrupt their draft.
+     */
+    fun fireCauseFromTrigger(event: TriggerEvent) {
+        if (_state.value.phase != CapturePhase.IDLE) return
+        _state.value = State(
+            phase = CapturePhase.CAUSE,
+            draft = CaptureDraft(
+                causeCapturedAt = nowIso(),
+                triggerSource   = TriggerSource.MULTIMODAL,
+                triggerChannels = listOf(TriggerChannel.FUSION_THRESHOLD),
+                triggerContext  = event.toSchemaContext(),
+            ),
         )
     }
 
