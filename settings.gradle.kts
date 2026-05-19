@@ -17,6 +17,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // Polar BLE SDK is distributed through JitPack.
+        maven { url = uri("https://jitpack.io") }
     }
 }
 

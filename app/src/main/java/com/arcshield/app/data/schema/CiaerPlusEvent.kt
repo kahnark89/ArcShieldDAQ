@@ -41,6 +41,53 @@ data class Cause(
     @SerialName("visual_anchor_description") val visualAnchorDescription: String? = null,
     @SerialName("visual_anchor_frame_ref")   val visualAnchorFrameRef: String? = null,
     @SerialName("acoustic_profile")          val acousticProfile: String? = null,
+    @SerialName("trigger_context")           val triggerContext: TriggerContext? = null,
+)
+
+@Serializable
+data class TriggerContext(
+    @SerialName("trigger_type")       val triggerType: TriggerType? = null,
+    @SerialName("confidence_score")   val confidenceScore: Double? = null,
+    @SerialName("signal_scores")      val signalScores: SignalScores? = null,
+    @SerialName("temporal_modifier")  val temporalModifier: Double? = null,
+    @SerialName("operational_mode")   val operationalMode: OperationalMode? = null,
+    @SerialName("threshold_at_fire")  val thresholdAtFire: Double? = null,
+    @SerialName("sensor_context")     val sensorContext: TriggerSensorContext? = null,
+    @SerialName("feedback")           val feedback: TriggerFeedback? = null,
+)
+
+@Serializable
+enum class TriggerType {
+    @SerialName("automatic") AUTOMATIC,
+    @SerialName("manual")    MANUAL,
+}
+
+@Serializable
+data class SignalScores(
+    @SerialName("gaze")     val gaze: Double? = null,
+    @SerialName("hand")     val hand: Double? = null,
+    @SerialName("hrv")      val hrv: Double? = null,
+    @SerialName("acoustic") val acoustic: Double? = null,
+)
+
+@Serializable
+enum class OperationalMode {
+    @SerialName("setup")           SETUP,
+    @SerialName("steady")          STEADY,
+    @SerialName("troubleshooting") TROUBLESHOOTING,
+}
+
+@Serializable
+data class TriggerSensorContext(
+    @SerialName("video_clip_url")     val videoClipUrl: String? = null,
+    @SerialName("audio_clip_url")     val audioClipUrl: String? = null,
+    @SerialName("biometric_snapshot") val biometricSnapshot: BiometricSnapshot? = null,
+)
+
+@Serializable
+data class TriggerFeedback(
+    @SerialName("operator_validated") val operatorValidated: Boolean? = null,
+    @SerialName("notes")              val notes: String? = null,
 )
 
 @Serializable
@@ -56,10 +103,11 @@ enum class TriggerSource {
 enum class TriggerChannel {
     @SerialName("hr_deviation")        HR_DEVIATION,
     @SerialName("hrv_rmssd_deviation") HRV_RMSSD_DEVIATION,
-    @SerialName("body_response")       BODY_RESPONSE,
     @SerialName("gaze_dwell")          GAZE_DWELL,
     @SerialName("operator_button")     OPERATOR_BUTTON,
     @SerialName("acoustic_anomaly")    ACOUSTIC_ANOMALY,
+    @SerialName("hand_pose")           HAND_POSE,
+    @SerialName("fusion_threshold")    FUSION_THRESHOLD,
 }
 
 @Serializable
@@ -193,7 +241,7 @@ data class BiometricSnapshot(
     @SerialName("hrv_rmssd_ms")        val hrvRmssdMs: Double? = null,
     @SerialName("hrv_deviation_z")     val hrvDeviationZ: Double? = null,
     @SerialName("activity_class")      val activityClass: ActivityClass? = null,
-    @SerialName("body_response_fired") val bodyResponseFired: Boolean? = null,
+    @SerialName("skin_temp_c")         val skinTempC: Double? = null,
     @SerialName("eda_microsiemens")    val edaMicrosiemens: Double? = null,
     @SerialName("source_device")       val sourceDevice: SourceDevice? = null,
 )
@@ -209,9 +257,9 @@ enum class ActivityClass {
 
 @Serializable
 enum class SourceDevice {
-    @SerialName("pixel_watch_4")        PIXEL_WATCH_4,
-    @SerialName("empatica_embraceplus") EMPATICA_EMBRACEPLUS,
-    @SerialName("other")                OTHER,
+    @SerialName("polar_h10")           POLAR_H10,
+    @SerialName("polar_verity_sense")  POLAR_VERITY_SENSE,
+    @SerialName("other")               OTHER,
 }
 
 @Serializable
@@ -231,8 +279,8 @@ enum class PovSource {
 
 @Serializable
 enum class BiometricSourceTag {
-    @SerialName("pixel_watch_4")        PIXEL_WATCH_4,
-    @SerialName("empatica_embraceplus") EMPATICA_EMBRACEPLUS,
-    @SerialName("none")                 NONE,
-    @SerialName("other")                OTHER,
+    @SerialName("polar_h10")           POLAR_H10,
+    @SerialName("polar_verity_sense")  POLAR_VERITY_SENSE,
+    @SerialName("none")                NONE,
+    @SerialName("other")               OTHER,
 }

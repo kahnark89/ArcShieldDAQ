@@ -1,5 +1,6 @@
 package com.arcshield.app.preenv
 
+import com.arcshield.app.sensory.SensoryBundle
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -91,6 +92,18 @@ data class PreEnvSnapshot(
      */
     @SerialName("recent_events_summary")
     val recentEventsSummary: String,
+
+    /**
+     * Five-channel sensory baseline captured at shift start by
+     * SensoryCaptureManager.captureBaseline(). Per-channel deltas are computed
+     * against this baseline at event time and surface as elicitation hints
+     * for the PIE prompt builder.
+     *
+     * Null when the sensory layer is disabled or has not yet captured a
+     * baseline this shift. See CLAUDE_CODE_HANDOFF_INTEGRATION.md → Layer 1.
+     */
+    @SerialName("sensory_baseline")
+    val sensoryBaseline: SensoryBundle? = null,
 )
 
 @Serializable

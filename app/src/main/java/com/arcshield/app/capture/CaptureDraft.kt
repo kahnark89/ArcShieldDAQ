@@ -15,6 +15,7 @@ import com.arcshield.app.data.schema.SensorReading
 import com.arcshield.app.data.schema.ShadowAction
 import com.arcshield.app.data.schema.SrkLevel
 import com.arcshield.app.data.schema.TriggerChannel
+import com.arcshield.app.data.schema.TriggerContext
 import com.arcshield.app.data.schema.TriggerSource
 import com.arcshield.app.preenv.PreEnvSnapshot
 import java.util.UUID
@@ -29,6 +30,7 @@ data class CaptureDraft(
     val causeCapturedAt:       String? = null,
     val triggerSource:         TriggerSource = TriggerSource.OPERATOR_INITIATED,
     val triggerChannels:       List<TriggerChannel> = emptyList(),
+    val triggerContext:        TriggerContext? = null,
     val visualAnchorDescription: String? = null,
     val visualAnchorFrameRef:  String? = null,
     val causeSensorReadings:   List<SensorReading> = emptyList(),
@@ -59,6 +61,7 @@ data class CaptureDraft(
     val escalationDelta:     String? = null,
     val hypothesisConfirmed: Boolean = false,
     val productQualityImpact: String? = null,
+    val graphWeight:          Double = 0.5,
 ) {
     fun finalize(preEnv: PreEnvSnapshot, nowIso: () -> String): CiaerPlusEvent {
         val cause = Cause(
@@ -69,6 +72,7 @@ data class CaptureDraft(
             biometricSnapshot       = causeBiometrics,
             visualAnchorDescription = visualAnchorDescription,
             visualAnchorFrameRef    = visualAnchorFrameRef,
+            triggerContext          = triggerContext,
         )
         val intuition = Intuition(
             srkLevel         = srkLevel,
@@ -98,6 +102,7 @@ data class CaptureDraft(
             escalationDelta      = escalationDelta,
             hypothesisConfirmed  = hypothesisConfirmed,
             productQualityImpact = productQualityImpact,
+            graphWeight          = graphWeight,
         )
         return CiaerPlusEvent(
             eventId       = eventId,

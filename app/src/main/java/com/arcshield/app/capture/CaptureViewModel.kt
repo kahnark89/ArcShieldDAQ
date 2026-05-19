@@ -5,14 +5,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.arcshield.app.bio.source.BiometricSource
 import com.arcshield.app.capture.source.PhoneCameraSource
+import com.arcshield.app.data.repository.SensoryEventRepository
 import com.arcshield.app.data.schema.KnowledgeSource
 import com.arcshield.app.data.schema.OutcomeTag
 import com.arcshield.app.data.schema.PredictionMatch
 import com.arcshield.app.data.schema.ShadowAction
 import com.arcshield.app.data.schema.SrkLevel
+import com.arcshield.app.data.schema.TriggerChannel
+import com.arcshield.app.data.schema.TriggerSource
 import com.arcshield.app.llm.IntuitionParser
-import com.arcshield.app.preenv.source.PreEnvSource
-import com.arcshield.app.sync.CorpusSink
+import com.arcshield.app.trigger.TriggerEvent
 import com.arcshield.app.vision.GaugeReader
 import com.arcshield.app.voice.SpeechInput
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -31,12 +33,11 @@ import javax.inject.Inject
 class CaptureViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     val phoneCamera:        PhoneCameraSource,
-    private val preEnv:     PreEnvSource,
     private val biometrics: BiometricSource,
     private val gaugeReader: GaugeReader,
     val speechInput:        SpeechInput,
     private val intuitionParser: IntuitionParser,
-    private val sink:       CorpusSink,
+    private val repository: SensoryEventRepository,
 ) : ViewModel() {
 
     data class State(
@@ -52,6 +53,28 @@ class CaptureViewModel @Inject constructor(
         _state.value = State(
             phase = CapturePhase.CAUSE,
             draft = CaptureDraft(causeCapturedAt = nowIso()),
+        )
+    }
+
+    /**
+     * Layer 2 entry point. Called by the foreground host when [FusionEngine]
+     * emits a [TriggerEvent]. Transitions the state machine from IDLE into
+     * CAUSE and stashes the fusion context for later attachment to
+     * `Cause.triggerContext` at submission. Ignored if the operator is
+     * already mid-cycle — the fusion engine's own 10 s lockout prevents
+     * fire spam, but a stray trigger after the operator manually started
+     * a cycle should not corrupt their draft.
+     */
+    fun fireCauseFromTrigger(event: TriggerEvent) {
+        if (_state.value.phase != CapturePhase.IDLE) return
+        _state.value = State(
+            phase = CapturePhase.CAUSE,
+            draft = CaptureDraft(
+                causeCapturedAt = nowIso(),
+                triggerSource   = TriggerSource.MULTIMODAL,
+                triggerChannels = listOf(TriggerChannel.FUSION_THRESHOLD),
+                triggerContext  = event.toSchemaContext(),
+            ),
         )
     }
 
@@ -193,12 +216,10 @@ class CaptureViewModel @Inject constructor(
 
     fun submit() {
         viewModelScope.launch {
-            val snap  = preEnv.currentSnapshot()
             val draft = _state.value.draft.copy(completedAt = nowIso())
-            val event = draft.finalize(preEnv = snap, nowIso = ::nowIso)
-            when (val res = sink.persist(event)) {
-                is CorpusSink.Result.Success -> _state.value = State()
-                is CorpusSink.Result.Failure -> _state.update {
+            when (val res = repository.assembleAndSave(draft)) {
+                is SensoryEventRepository.SaveResult.Success -> _state.value = State()
+                is SensoryEventRepository.SaveResult.Failure -> _state.update {
                     it.copy(lastSaveError = res.cause.message ?: "save failed")
                 }
             }

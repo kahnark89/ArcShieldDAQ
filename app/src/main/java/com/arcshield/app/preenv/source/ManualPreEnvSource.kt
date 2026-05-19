@@ -5,12 +5,15 @@ import com.arcshield.app.preenv.PreEnvPrefsStore
 import com.arcshield.app.preenv.PreEnvSnapshot
 import com.arcshield.app.preenv.PreEnvTracker
 import com.arcshield.app.preenv.ShiftPhase
+import com.arcshield.app.sensory.SensoryCaptureManager
+import com.arcshield.app.sensory.SensoryBundle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.serialization.json.Json
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -19,8 +22,10 @@ import javax.inject.Singleton
 
 @Singleton
 class ManualPreEnvSource @Inject constructor(
-    private val prefs:   PreEnvPrefsStore,
-    private val tracker: PreEnvTracker,
+    private val prefs:                 PreEnvPrefsStore,
+    private val tracker:               PreEnvTracker,
+    private val sensoryCaptureManager: SensoryCaptureManager,
+    private val json:                  Json,
 ) : PreEnvSource {
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -44,6 +49,8 @@ class ManualPreEnvSource @Inject constructor(
         shiftStartedAt: String,
     ) {
         prefs.startShift(operatorId, shiftSessionId, Instant.parse(shiftStartedAt).toEpochMilli())
+        val baseline: SensoryBundle = sensoryCaptureManager.captureBaseline()
+        prefs.saveSensoryBaseline(json.encodeToString(SensoryBundle.serializer(), baseline))
     }
 
     override suspend fun recordShiftEnd() {
