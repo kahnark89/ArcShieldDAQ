@@ -185,14 +185,25 @@ yet. To get live snapshots you need:
 
 ---
 
-## SDK version note
+## SDK version note (updated 2026-05-20)
 
-`polar-ble-sdk = "5.6.0"` is a known-good recent version. The Polar
-SDK API has shifted across major versions (4.x used different feature
-enum names than 5.x). If the build fails resolving `PolarBleSdkFeature`
-or `PolarDeviceDataType.SKIN_TEMPERATURE`, check the JitPack release
-page and update both the version and any renamed symbol references in
-`PolarBiometrics.kt`. The SDK source is at
+`polar-ble-sdk = "7.1.0"` is the current version. The JitPack
+coordinate is the single-module form `com.github.polarofficial:polar-ble-sdk`
+(NOT the multi-module `com.github.polarofficial.polar-ble-sdk:sdk` that
+was erroneously set in the prior session — the build would resolve to
+"Failed to resolve" with the old coordinate).
+
+**Breaking change at 7.0.0:** The public Android API migrated from
+RxJava (Observable/Flowable/Single/Completable) to native Kotlin Flow.
+Streaming methods (`startHrStreaming`, `searchForDevice`, `startSkinTemperatureStreaming`)
+now return `Flow<T>`. Scalar-return methods (`getAvailableOnlineStreamDataTypes`,
+`requestStreamSettings`) are now `suspend`. App-side `Disposable` types
+and the `kotlinx-coroutines-rx3` bridge are gone; `Job` manages
+streaming lifecycle. `PolarBiometrics.kt` was rewritten for 7.x on 2026-05-20.
+
+`PolarBleApiDefaultImpl.defaultImplementation()`, `PolarBleApiCallback`,
+`bleSdkFeatureReady`, `deviceConnected`, and `deviceDisconnected` are
+unchanged in 7.x. The SDK source is at
 `https://github.com/polarofficial/polar-ble-sdk`.
 
 ---

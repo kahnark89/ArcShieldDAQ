@@ -12,9 +12,9 @@ import com.polar.sdk.api.errors.PolarInvalidArgument
 import com.polar.sdk.api.model.PolarDeviceInfo
 import com.polar.sdk.api.model.PolarHrData
 import dagger.hilt.android.qualifiers.ApplicationContext
-import io.reactivex.rxjava3.disposables.Disposable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,7 +23,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.rx3.asFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
@@ -31,26 +30,20 @@ import javax.inject.Singleton
 import kotlin.math.sqrt
 
 /**
- * BiometricSource backed by the Polar BLE SDK. Supports both:
+ * BiometricSource backed by the Polar BLE SDK 7.x. Supports both:
  *   - Polar H10 chest strap — research-grade beat-to-beat HRV, no skin temp.
  *   - Polar Verity Sense armband — optical HRV (less precise than H10) plus
- *     skin temperature when the SDK build exposes it.
+ *     skin temperature when the SDK exposes SKIN_TEMPERATURE for the device.
  *
  * The class owns the SDK lifecycle, connects to a single paired device per
  * shift, and exposes a [StateFlow] of [BiometricSnapshot] that the fusion
  * engine subscribes to at 200 ms cadence. HRV-RMSSD is computed locally from
  * the device's RR-interval stream — Polar gives us beat-to-beat raw RR-ms
- * lists per HR sample, so the math is straightforward.
+ * lists per HR sample.
  *
- * Notes on the Polar SDK surface:
- *   - The SDK is RxJava 3 native; we adapt with kotlinx-coroutines-rx3 and
- *     never let RxJava leak past this class.
- *   - Skin temperature streaming requires `PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING`
- *     and a device firmware that supports the SKIN_TEMPERATURE data type.
- *     The wiring is in [subscribeSkinTempIfAvailable] and is best-effort:
- *     if the device doesn't expose it, [BiometricSnapshot.skinTempC] stays null.
- *   - Device pairing UI is out of scope here. The deviceId passed to [start]
- *     comes from `ConfigStore` (DataStore) and is set during onboarding.
+ * SDK 7.0.0 migrated the public API from RxJava to native Kotlin Flow, so
+ * streaming methods return [Flow] directly and Single/Completable methods are
+ * now suspend functions. No RxJava bridge is needed in app code.
  */
 @Singleton
 class PolarBiometrics @Inject constructor(
@@ -78,8 +71,8 @@ class PolarBiometrics @Inject constructor(
 
     private var deviceId: String? = null
     private var deviceModel: SourceDevice = SourceDevice.OTHER
-    private var hrSubscription: Disposable? = null
-    private var skinTempSubscription: Disposable? = null
+    private var hrJob: Job? = null
+    private var skinTempJob: Job? = null
 
     init {
         api.setApiCallback(object : PolarBleApiCallback() {
@@ -98,7 +91,8 @@ class PolarBiometrics @Inject constructor(
                 feature: PolarBleApi.PolarBleSdkFeature,
             ) {
                 if (feature == PolarBleApi.PolarBleSdkFeature.FEATURE_POLAR_ONLINE_STREAMING) {
-                    scope.launch { subscribeHr(identifier); subscribeSkinTempIfAvailable(identifier) }
+                    subscribeHr(identifier)
+                    scope.launch { subscribeSkinTempIfAvailable(identifier) }
                 }
             }
         })
@@ -120,8 +114,10 @@ class PolarBiometrics @Inject constructor(
 
     override suspend fun currentSnapshot(): BiometricSnapshot = _snapshots.value
 
+    // SDK 7.x: searchForDevice returns Flow<PolarDeviceInfo> directly; pass null
+    // to discover all nearby Polar devices rather than filtering by name prefix.
     override fun scanForDevices(): Flow<BiometricSource.ScannedDevice> =
-        api.searchForDevice().asFlow().map { info ->
+        api.searchForDevice(null).map { info ->
             BiometricSource.ScannedDevice(
                 deviceId = info.deviceId,
                 name     = info.name ?: "Unknown",
@@ -130,45 +126,39 @@ class PolarBiometrics @Inject constructor(
         }
 
     private fun stopInternal() {
-        hrSubscription?.dispose(); hrSubscription = null
-        skinTempSubscription?.dispose(); skinTempSubscription = null
+        hrJob?.cancel(); hrJob = null
+        skinTempJob?.cancel(); skinTempJob = null
         deviceId?.let { runCatching { api.disconnectFromDevice(it) } }
         rrWindowMs.clear()
         _snapshots.value = BiometricSnapshot()
         deviceId = null
     }
 
+    // SDK 7.x: startHrStreaming returns Flow<PolarHrData> — collect in a coroutine Job
+    // so it can be cancelled cleanly when the device disconnects or the app backgrounds.
     private fun subscribeHr(identifier: String) {
-        hrSubscription?.dispose()
-        hrSubscription = api.startHrStreaming(identifier)
-            .subscribe(
-                { data -> handleHr(data) },
-                { err -> Log.w(TAG, "HR stream error", err) },
-            )
+        hrJob?.cancel()
+        hrJob = scope.launch {
+            api.startHrStreaming(identifier).collect { data -> handleHr(data) }
+        }
     }
 
+    // SDK 7.x: getAvailableOnlineStreamDataTypes and requestStreamSettings are now
+    // suspend functions returning values directly (was RxJava Single before).
     private suspend fun subscribeSkinTempIfAvailable(identifier: String) {
-        // Skin temp is only exposed by certain Verity Sense firmwares. We
-        // probe the available stream types and subscribe only if SKIN_TEMPERATURE
-        // is present. Adapt to Flow to keep the suspend boundary clean.
         runCatching {
-            val available = api.getAvailableOnlineStreamDataTypes(identifier).asFlow()
-            available.collect { types ->
-                val skinType = PolarBleApi.PolarDeviceDataType.entries
-                    .firstOrNull { it.name == "SKIN_TEMPERATURE" }
-                if (skinType != null && skinType in types) {
-                    val settings = api.requestStreamSettings(identifier, skinType).asFlow()
-                    settings.collect { setting ->
-                        skinTempSubscription?.dispose()
-                        skinTempSubscription = api.startTemperatureStreaming(identifier, setting.maxSettings())
-                            .subscribe(
-                                { sample ->
-                                    val tempC = sample.samples.lastOrNull()?.temperature?.toDouble()
-                                    _snapshots.update { it.copy(skinTempC = tempC) }
-                                },
-                                { err -> Log.w(TAG, "Skin temp stream error", err) },
-                            )
-                    }
+            val types = api.getAvailableOnlineStreamDataTypes(identifier)
+            val skinType = PolarBleApi.PolarDeviceDataType.entries
+                .firstOrNull { it.name == "SKIN_TEMPERATURE" }
+            if (skinType != null && skinType in types) {
+                val setting = api.requestStreamSettings(identifier, skinType)
+                skinTempJob?.cancel()
+                skinTempJob = scope.launch {
+                    api.startSkinTemperatureStreaming(identifier, setting.maxSettings())
+                        .collect { sample ->
+                            val tempC = sample.samples.lastOrNull()?.temperature?.toDouble()
+                            _snapshots.update { it.copy(skinTempC = tempC) }
+                        }
                 }
             }
         }.onFailure { Log.d(TAG, "Skin temp not available on this device", it) }
@@ -190,11 +180,11 @@ class PolarBiometrics @Inject constructor(
 
         _snapshots.update {
             it.copy(
-                hrBpm = hrBpm,
-                hrDeviationZ = baseline.hrZ(hrBpm),
-                hrvRmssdMs = rmssd,
+                hrBpm         = hrBpm,
+                hrDeviationZ  = baseline.hrZ(hrBpm),
+                hrvRmssdMs    = rmssd,
                 hrvDeviationZ = rmssd?.let { v -> baseline.hrvZ(v) },
-                sourceDevice = deviceModel,
+                sourceDevice  = deviceModel,
             )
         }
     }
@@ -212,17 +202,16 @@ class PolarBiometrics @Inject constructor(
     }
 
     private fun inferDeviceModel(name: String?): SourceDevice = when {
-        name == null -> SourceDevice.OTHER
-        name.contains("H10", ignoreCase = true) -> SourceDevice.POLAR_H10
-        name.contains("Verity", ignoreCase = true) -> SourceDevice.POLAR_VERITY_SENSE
-        else -> SourceDevice.OTHER
+        name == null                                -> SourceDevice.OTHER
+        name.contains("H10", ignoreCase = true)     -> SourceDevice.POLAR_H10
+        name.contains("Verity", ignoreCase = true)  -> SourceDevice.POLAR_VERITY_SENSE
+        else                                        -> SourceDevice.OTHER
     }
 
     companion object {
         private const val TAG = "PolarBiometrics"
-        // RMSSD is typically computed over the last 30–60 s of beat-to-beat
-        // intervals. At a resting 60 bpm that's ~30–60 beats; the fusion engine
-        // wants a tighter window for responsiveness, so we keep 60 beats.
+        // RMSSD computed over last 60 beats (~1 min at rest). Tighter than the
+        // clinical 5-min window but sufficient for the 200 ms fusion cadence.
         private const val RR_WINDOW_BEATS = 60
         private const val MIN_RR_FOR_RMSSD = 5
     }

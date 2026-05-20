@@ -175,17 +175,18 @@ retrieval. Convert lazily, not pre-emptively.
   (Kahn's personal-use deployment is on current Pixel hardware; the
   industrial-tablet broad-support story from earlier handoffs is no
   longer in scope — see `CLAUDE_CODE_HANDOFF_POLAR.md` §Scope).
-- Coroutines and Flow throughout; Polar BLE SDK is RxJava 3 native
-  but bridged to Flow via `kotlinx-coroutines-rx3` inside
-  `PolarBiometrics` — RxJava types must not leak past that class.
+- Coroutines and Flow throughout; Polar BLE SDK 7.x exposes native Kotlin
+  Flow — no RxJava bridge needed in app code (`rxjava3` and
+  `kotlinx-coroutines-rx3` removed from `app/build.gradle.kts` on 2026-05-20).
 - Jetpack Compose for UI; no XML layouts.
 - Hilt for DI (required for the abstraction layer toggling).
 - kotlinx.serialization for JSON (matches existing `@SerialName` usage).
 - Room for event queue, DataStore for config.
-- **Biometrics**: Polar BLE SDK 5.6.x via JitPack (settings.gradle.kts
-  declares the JitPack repo). The SDK requires `BLUETOOTH_SCAN`
-  (with `neverForLocation`) and `BLUETOOTH_CONNECT` runtime
-  permissions — declared in `AndroidManifest.xml`.
+- **Biometrics**: Polar BLE SDK 7.1.x via JitPack (coordinate
+  `com.github.polarofficial:polar-ble-sdk`; settings.gradle.kts declares
+  the JitPack repo). The SDK requires `BLUETOOTH_SCAN` (with
+  `neverForLocation`) and `BLUETOOTH_CONNECT` runtime permissions —
+  declared in `AndroidManifest.xml`.
 - Test pure logic as you go; integration tests for the state machine.
 
 ## What is NOT in scope for this repo
@@ -247,7 +248,7 @@ retrieval. Convert lazily, not pre-emptively.
   `PolarPairingViewModel` added to onboarding; 10-second BLE scan +
   device selection persists `polar_device_id` to `PreEnvPrefsStore`.
   `BiometricSource.scanForDevices()` added to interface;
-  `PolarBiometrics` implements it via `api.searchForDevice().asFlow()`.
+  `PolarBiometrics` implements it via `api.searchForDevice(null)` (Flow-native in SDK 7.x).
   `MainActivity` collects `polarDeviceId` with `collectLatest` in a
   `repeatOnLifecycle(STARTED)` block — calls `start(deviceId)` on
   foreground and `stop()` in `finally` on background. Pairing screen
@@ -332,7 +333,7 @@ Resolved (do not re-open without flagging):
   PolarBiometrics lifecycle wired: `PolarPairingScreen` / `PolarPairingViewModel`
   added (BLE scan, device selection, DataStore persistence); `BiometricSource`
   gains `ScannedDevice` + `scanForDevices()`; `PolarBiometrics` implements it
-  via `api.searchForDevice().asFlow()`; `MainActivity` uses `collectLatest` on
+  via `api.searchForDevice(null)` (Flow-native, SDK 7.x); `MainActivity` uses `collectLatest` on
   `polarDeviceId` to call `start()`/`stop()` around the STARTED lifecycle.
   Sensory providers built: `OpenMeteoThermalProvider`, `ChipAndWakeWordAnnotation-
   Provider`, `PhoneCameraFrameProvider` (CameraX + ProcessLifecycleOwner);
@@ -374,6 +375,17 @@ Resolved (do not re-open without flagging):
   in the web dashboard hosted by the server. Recorded as
   Non-negotiable principle #8 and an additional "NOT in scope"
   bullet.
+- **2026-05-20** — Polar BLE SDK upgraded from non-existent `5.6.0` to
+  `7.1.0`. JitPack coordinate corrected from multi-module form
+  (`com.github.polarofficial.polar-ble-sdk:sdk`) to single-module form
+  (`com.github.polarofficial:polar-ble-sdk`). SDK 7.0.0 migrated the
+  Android public API from RxJava to native Kotlin Flow: `rxjava3` and
+  `kotlinx-coroutines-rx3` removed from `app/build.gradle.kts` and
+  `libs.versions.toml`; `PolarBiometrics.kt` rewritten — `Disposable`
+  → `Job`, `.asFlow()` bridge removed, `getAvailableOnlineStreamDataTypes`
+  and `requestStreamSettings` called directly as `suspend` functions,
+  `startHrStreaming`/`startSkinTemperatureStreaming`/`searchForDevice(null)`
+  now return `Flow` natively.
 - **2026-05-16 (PM)** — Biometric path swap. Pixel Watch and Empatica
   removed entirely; replaced with `PolarBiometrics` (Polar BLE SDK,
   supports H10 + Verity Sense). Schema `BiometricSnapshot.source_device`
