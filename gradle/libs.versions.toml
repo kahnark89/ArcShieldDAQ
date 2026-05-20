@@ -9,10 +9,11 @@ kotlinx-serialization = "1.7.3"
 kotlinx-coroutines    = "1.9.0"
 security-crypto       = "1.1.0-alpha06"
 okhttp                = "4.12.0"
-health-connect        = "1.1.0-rc01"
+polar-ble-sdk         = "7.1.0"
 camerax               = "1.4.1"
 work                  = "2.10.0"
 hilt-work             = "1.2.0"
+junit                 = "4.13.2"
 
 [libraries]
 # Kotlin
@@ -54,8 +55,10 @@ security-crypto                 = { group = "androidx.security",     name = "sec
 # Network
 okhttp                          = { group = "com.squareup.okhttp3",  name = "okhttp",                       version.ref = "okhttp" }
 
-# Health Connect
-health-connect                  = { group = "androidx.health.connect", name = "connect-client",             version.ref = "health-connect" }
+# Polar BLE SDK (research-grade HRV from H10 chest strap and Verity Sense armband).
+# Hosted on JitPack — see settings.gradle.kts. SDK 7.0.0+ exposes native Kotlin Flow;
+# no RxJava bridge required in app code (RxJava remains an internal SDK detail).
+polar-ble-sdk                   = { group = "com.github.polarofficial", name = "polar-ble-sdk",            version.ref = "polar-ble-sdk" }
 
 # CameraX
 camerax-core                    = { group = "androidx.camera",       name = "camera-core",                  version.ref = "camerax" }
@@ -67,6 +70,10 @@ camerax-view                    = { group = "androidx.camera",       name = "cam
 work-runtime-ktx                = { group = "androidx.work",         name = "work-runtime-ktx",             version.ref = "work" }
 hilt-work                       = { group = "androidx.hilt",         name = "hilt-work",                    version.ref = "hilt-work" }
 hilt-work-compiler              = { group = "androidx.hilt",         name = "hilt-compiler",                version.ref = "hilt-work" }
+
+# Test (JVM unit tests under app/src/test/)
+junit                           = { group = "junit",                 name = "junit",                        version.ref = "junit" }
+kotlinx-coroutines-test         = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test",      version.ref = "kotlinx-coroutines" }
 
 [plugins]
 android-application   = { id = "com.android.application",                version.ref = "agp" }

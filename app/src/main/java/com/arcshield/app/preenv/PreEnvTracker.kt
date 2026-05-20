@@ -1,8 +1,10 @@
 package com.arcshield.app.preenv
 
+import com.arcshield.app.sensory.SensoryBundle
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.serialization.json.Json
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -15,6 +17,7 @@ class PreEnvTracker @Inject constructor(
     private val batchTracker:  MaterialBatchTracker,
     private val tempTracker:   AmbientTempTracker,
     private val rollup:        RecentEventsRollup,
+    private val json:          Json,
 ) {
     private data class ShiftState(
         val operatorId:     String?,
@@ -34,7 +37,8 @@ class PreEnvTracker @Inject constructor(
         shiftStateFlow,
         batchTracker.current,
         tempTracker.current,
-    ) { shift, batch, temp -> build(shift, batch, temp) }
+        prefs.sensoryBaselineJson,
+    ) { shift, batch, temp, baselineJson -> build(shift, batch, temp, baselineJson) }
 
     suspend fun now(): PreEnvSnapshot {
         val shift = ShiftState(
@@ -43,16 +47,21 @@ class PreEnvTracker @Inject constructor(
             shiftStartedAt = prefs.shiftStartedAtEpochMs.first(),
             shiftHours     = prefs.shiftDurationHours.first(),
         )
-        return build(shift, batchTracker.current.first(), tempTracker.current.value)
+        val baselineJson = prefs.sensoryBaselineJson.first()
+        return build(shift, batchTracker.current.first(), tempTracker.current.value, baselineJson)
     }
 
     private suspend fun build(
-        shift: ShiftState,
-        batch: MaterialBatchTracker.Batch?,
-        temp:  AmbientTempTracker.Reading?,
+        shift:        ShiftState,
+        batch:        MaterialBatchTracker.Batch?,
+        temp:         AmbientTempTracker.Reading?,
+        baselineJson: String?,
     ): PreEnvSnapshot {
-        val now          = Instant.now()
-        val shiftInstant = shift.shiftStartedAt?.let { Instant.ofEpochMilli(it) }
+        val now             = Instant.now()
+        val shiftInstant    = shift.shiftStartedAt?.let { Instant.ofEpochMilli(it) }
+        val sensoryBaseline = baselineJson?.let { str ->
+            runCatching { json.decodeFromString(SensoryBundle.serializer(), str) }.getOrNull()
+        }
         return PreEnvSnapshot(
             snapshotTimestamp      = ISO.format(now),
             operatorId             = shift.operatorId.orEmpty(),
@@ -63,6 +72,7 @@ class PreEnvTracker @Inject constructor(
             ambientTempF           = temp?.fahrenheit,
             ambientTempSource      = temp?.source ?: AmbientTempSource.UNAVAILABLE,
             recentEventsSummary    = rollup.summary(),
+            sensoryBaseline        = sensoryBaseline,
         )
     }
 

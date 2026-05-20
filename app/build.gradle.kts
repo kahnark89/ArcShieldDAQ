@@ -84,8 +84,9 @@ dependencies {
     // Network
     implementation(libs.okhttp)
 
-    // Health Connect
-    implementation(libs.health.connect)
+    // Polar BLE SDK 7.x (HRV via H10 / Verity Sense). SDK 7.0.0 migrated to native
+    // Kotlin Flow — no RxJava bridge needed in app code.
+    implementation(libs.polar.ble.sdk)
 
     // CameraX
     implementation(libs.camerax.core)
@@ -97,4 +98,8 @@ dependencies {
     implementation(libs.work.runtime.ktx)
     implementation(libs.hilt.work)
     ksp(libs.hilt.work.compiler)
+
+    // Unit tests (src/test/) — JVM only, no device required.
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
 }

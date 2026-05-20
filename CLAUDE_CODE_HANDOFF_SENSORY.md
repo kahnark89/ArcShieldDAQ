@@ -1,9 +1,22 @@
 # Claude Code Handoff — ArcShield Sensory Module
 
 **Project:** ArcShield (CIAER+ capture platform)
-**Module:** `com.capps.arcshield.sensory` + `com.capps.arcshield.data`
-**Generated:** Monday, May 11, 2026
-**Target package root:** `app/src/main/java/com/capps/arcshield/`
+**Module:** `com.arcshield.app.sensory`
+**Generated:** Monday, May 11, 2026 — updated May 16, 2026
+**Target package root:** `app/src/main/java/com/arcshield/app/sensory/`
+
+> **2026-05-16 update:** package root reconciled from `com.capps.arcshield`
+> to `com.arcshield.app` to match the on-disk codebase. The 16-file
+> sensory tree (channels, providers, FFT, bundle/snapshot/delta types)
+> has been extracted from `arcshield_sensory_module.zip` and the package
+> declarations rewritten. The ZIP's `data/` files (`CiaerEvent.kt`,
+> `PreEnvSnapshot.kt`, `PreEnvSource.kt`) were **not** extracted —
+> the on-disk `com.arcshield.app.preenv.*` and
+> `com.arcshield.app.data.schema.CiaerPlusEvent` are more elaborated.
+> `PreEnvSnapshot` now carries a nullable `sensoryBaseline: SensoryBundle`
+> field; the schema gained matching `sensory_baseline` and SensoryBundle
+> $defs. See `CLAUDE_CODE_HANDOFF_INTEGRATION.md` for the three-layer
+> reconciliation.
 
 ---
 
@@ -33,11 +46,12 @@ sensory/
     ├── OlfactoryAnnotationProvider.kt   # interface — chips/wake word + VOC sensor
     └── ThermalAmbientProvider.kt        # interface — Open-Meteo + BT IR thermometer
 
-data/
-├── PreEnvSnapshot.kt                    # Pre-Cause baseline; carries SensoryBundle baseline
-├── PreEnvSource.kt                      # interface — StateFlow, captureShiftStart, updateMaterialBatch
-└── CiaerEvent.kt                        # full CIAER+ schema: Cause/Intuition/Action/Effect/Result + ShadowAction sibling
 ```
+
+The ZIP's `data/` files are NOT extracted — the on-disk
+`com.arcshield.app.preenv.PreEnvSnapshot`, `…preenv.source.PreEnvSource`,
+and `…data.schema.CiaerPlusEvent` supersede them. `PreEnvSnapshot` was
+updated in-place to carry a `sensoryBaseline: SensoryBundle?` field.
 
 ---
 
@@ -66,17 +80,19 @@ Drop into `sensory/providers/impl/`:
 
 ### 3.2 Repository layer
 
-`data/repository/SensoryEventRepository.kt`:
+`data/repository/SensoryEventRepository.kt` (target package
+`com.arcshield.app.data.repository`):
 - Wires `SensoryCaptureManager` + `PreEnvSource` + Room DAO + LLM client.
-- `assembleEvent(intuition, action, shadowActions, effect, result): CiaerEvent`
+- `assembleEvent(intuition, action, shadowActions, effect, result): CiaerPlusEvent`
 - Computes `graph_weight` from tenure / outcome / srk_confidence per §10.12.
 - Updates `PreEnvSource.recentEventsSummary` after each event.
 
 ### 3.3 PreEnvSource default impl
 
-`data/DefaultPreEnvSource.kt`:
-- Holds the `StateFlow<PreEnvSnapshot?>` per the interface.
-- `captureShiftStart` calls `SensoryCaptureManager.captureBaseline()` and stitches the result into `PreEnvSnapshot.sensoryBaseline`.
+Wire `ManualPreEnvSource` (already on disk at
+`com.arcshield.app.preenv.source.ManualPreEnvSource`) to call
+`SensoryCaptureManager.captureBaseline()` on shift start and stitch the
+result into `PreEnvSnapshot.sensoryBaseline` (field added 2026-05-16).
 
 ---
 

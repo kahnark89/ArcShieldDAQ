@@ -6,6 +6,22 @@
 **Handoff date:** April 19, 2026
 **Source:** This document was produced in a Claude mobile-app session to hand the Android build off to Claude Code on a laptop. The originating chat is not accessible from Claude Code; this document is the complete context needed to continue.
 
+> **⚠ Partially superseded.** This is the original April 2026 handoff. The
+> following decisions have evolved since — read **`CLAUDE.md`** for current
+> state and the named handoffs for detail:
+>
+> - **Biometric path:** decision 3 below described Pixel Watch + Empatica
+>   behind `BiometricSource`. As of 2026-05-16, **Pixel Watch and Empatica
+>   are removed**; only `PolarBiometrics` (H10 + Verity Sense) remains. See
+>   `CLAUDE_CODE_HANDOFF_POLAR.md`.
+> - **Three trigger architectures:** the SENSORY and detection-spec docs
+>   layer with this one — see `CLAUDE_CODE_HANDOFF_INTEGRATION.md`.
+> - **"Current repo state"** below was the day-0 starting state; reality
+>   has moved considerably. CLAUDE.md tracks current state.
+>
+> The architectural rationale and conventions in this document are still
+> authoritative where not contradicted above.
+
 ---
 
 ## Who you are and what you're doing
@@ -44,7 +60,7 @@ These were debated and decided upstream. Do not silently re-open them.
 
 **2. Abstraction layers for all device inputs.** Capture source, biometric source, corpus sink, LLM provider, and PreEnv source are all behind interfaces with Gen 1 implementations today and Gen 2 stubs for later. The single most important architectural principle: **the rest of the app does not know what physical device produced a given input.** The UI has toggles in ConfigScreen to swap implementations without touching downstream code.
 
-**3. Biometric trigger is HRV-centric, not EDA-centric.** The Damasio somatic marker hypothesis predicts EDA would carry the richest signal, but raw cEDA is not exposed by Health Connect on Pixel Watch 4. The operational trigger is HR + HRV-RMSSD + accelerometer-gated activity classification + gaze dwell. Multi-signal corroboration is required (2+ channels within a calibration window). Fitbit Body Response fires as a corroborator. Raw EDA via Empatica EmbracePlus is reserved for the §7.1 validation sub-study (stub only today). The schema has an `eda_microsiemens` field that remains null on Pixel Watch deployments.
+**3. Biometric trigger is HRV-centric.** *(Original wording preserved; see banner — Pixel Watch + Empatica path removed 2026-05-16, replaced with Polar-only via `PolarBiometrics`.)* The Damasio somatic marker hypothesis predicts EDA would carry the richest signal, but raw cEDA is not exposed by any current consumer wearable. The operational trigger is HR + HRV-RMSSD (Polar beat-to-beat RR intervals) + accelerometer-gated activity classification + gaze dwell. Multi-signal corroboration is required (2+ channels within a calibration window). Raw EDA is reserved for a future research-grade implementation behind the same `BiometricSource` interface. The schema has an `eda_microsiemens` field that stays null until such a device is wired.
 
 **4. Local server, not cloud.** The event corpus lives on a Python server (FastAPI, local on the plant network). Android app syncs events to it; the server runs RAG for the Twin, and later LoRA training. Cloud is a configuration change when second-facility deployments happen. Storage abstraction (`CorpusSink`) is designed for this.
 

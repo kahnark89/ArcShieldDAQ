@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import kotlinx.coroutines.flow.firstOrNull
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -31,6 +32,8 @@ class PreEnvPrefsStore @Inject constructor(
     val batchStartedAtEpochMs:   Flow<Long?>   = ds.data.map { it[BATCH_STARTED_AT] }
     val weatherLatitude:         Flow<Double>  = ds.data.map { it[WEATHER_LAT] ?: DEFAULT_LAT }
     val weatherLongitude:        Flow<Double>  = ds.data.map { it[WEATHER_LON] ?: DEFAULT_LON }
+    val polarDeviceId:           Flow<String?> = ds.data.map { it[POLAR_DEVICE_ID] }
+    val sensoryBaselineJson:     Flow<String?> = ds.data.map { it[SENSORY_BASELINE_JSON] }
 
     suspend fun startShift(operatorId: String, sessionId: String, startedAtEpochMs: Long) {
         ds.edit { p ->
@@ -69,6 +72,16 @@ class PreEnvPrefsStore @Inject constructor(
         ds.edit { p -> p[SHIFT_DURATION_HOURS] = hours }
     }
 
+    suspend fun savePolarDeviceId(id: String) {
+        ds.edit { p -> p[POLAR_DEVICE_ID] = id }
+    }
+
+    suspend fun currentPolarDeviceId(): String? = polarDeviceId.firstOrNull()
+
+    suspend fun saveSensoryBaseline(json: String) {
+        ds.edit { p -> p[SENSORY_BASELINE_JSON] = json }
+    }
+
     companion object {
         private val OPERATOR_ID          = stringPreferencesKey("operator_id")
         private val SHIFT_SESSION_ID     = stringPreferencesKey("shift_session_id")
@@ -78,6 +91,8 @@ class PreEnvPrefsStore @Inject constructor(
         private val BATCH_STARTED_AT     = longPreferencesKey("batch_started_at")
         private val WEATHER_LAT          = doublePreferencesKey("weather_lat")
         private val WEATHER_LON          = doublePreferencesKey("weather_lon")
+        private val POLAR_DEVICE_ID      = stringPreferencesKey("polar_device_id")
+        private val SENSORY_BASELINE_JSON = stringPreferencesKey("sensory_baseline_json")
 
         private const val DEFAULT_SHIFT_HOURS = 8
         // Hollowell Industries, Helena-West Helena, AR (72390)
